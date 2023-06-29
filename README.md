@@ -13,9 +13,10 @@ Learning-based control uses data to design efficient controllers for specific sy
 If you find our code or paper useful, please consider citing
 ```
 @article{vonrohr2023experience,
-      title={Probabilistic robust linear quadratic regulators with Gaussian processes}, 
+      title={Experience Transfer for Robust Direct Data-Driven Control}, 
       author={Alexander von Rohr and Dmitrii  Likhachev and Sebastian Trimpe},
       year={2023}
+}
 ```
 
 ## How to use the supplementary code
