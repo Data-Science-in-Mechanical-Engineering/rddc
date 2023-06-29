@@ -2,7 +2,8 @@
 
 This repository contains the supplementary code for the paper "Experience Transfer for Robust Direct Data-Driven Control"
 
-![rddc_vs_ls](https://github.com/Data-Science-in-Mechanical-Engineering/rddc/assets/76944030/8e892325-a59f-4339-afae-3a88cd944b4e)
+![Trajectories of the quadcopters with the robust controller](https://github.com/Data-Science-in-Mechanical-Engineering/rddc/assets/76944030/a7d45ef1-78b7-44b6-9814-8b7c38e8fadf)
+
 
 ## Abstract
 
