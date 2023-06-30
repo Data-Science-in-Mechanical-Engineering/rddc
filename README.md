@@ -10,12 +10,15 @@ This repository contains the supplementary code for the paper "Experience Transf
 Learning-based control uses data to design efficient controllers for specific systems. When multiple systems are involved, *experience transfer* usually focuses on data availability and controller performance yet neglects robustness to changes between systems. In contrast, this letter explores experience transfer from a robustness perspective. We leverage the transfer to design controllers that are robust not only to the uncertainty regarding an individual agent's model but also to the choice of agent in a fleet.  Experience transfer enables the design of safe and robust controllers that work out of the box for all systems in a heterogeneous fleet.  Our approach combines scenario optimization and recent formulations for direct data-driven control without the need to estimate a model of the system or determine uncertainty bounds for its parameters. We demonstrate the benefits of our data-driven robustification method through a numerical case study and obtain learned controllers that generalize well from a small number of open-loop trajectories in a quadcopter simulation.
 
 ### Citation 
-If you find our code or paper useful, please consider citing
+If you find our code or paper useful, please consider citing the current preprint
 ```
-@article{vonrohr2023experience,
+@misc{vonrohr2023experience,
       title={Experience Transfer for Robust Direct Data-Driven Control}, 
-      author={Alexander von Rohr and Dmitrii  Likhachev and Sebastian Trimpe},
-      year={2023}
+      author={Alexander von Rohr and Dmitrii Likhachev and Sebastian Trimpe},
+      year={2023},
+      eprint={2306.16973},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO}
 }
 ```
 
