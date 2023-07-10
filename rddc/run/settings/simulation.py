@@ -47,7 +47,8 @@ def get_settings():
     D = np.array([[1, 1]])
 
     trainSettings = {
-        'sfb': None,
+        'num_drones':N_synth,
+        'sfb':None,
         'sfb_freq_hz':10,
         'num_samples':T,
         'ctrl_noise':1.0,
@@ -60,10 +61,11 @@ def get_settings():
         'init_rpys_spread':0.2,
         # 'init_xyzs_spread':0.01,
         'gui':False,
-        'pid_type':'dsl'
+        'pid_type':'emulator'
     }
     testSettings = {
-        'sfb': 'direct',
+        'num_drones':N_test,
+        'sfb':'direct',
         'sfb_freq_hz':10,
         'num_samples':T_test,
         'ctrl_noise':0.0,
@@ -76,7 +78,7 @@ def get_settings():
         'wrap_wp':False,
         'wind_on':True,
         'gui':False,
-        'pid_type':'dsl'
+        'pid_type':'emulator'
     }
 
     return locals()

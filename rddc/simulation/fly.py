@@ -12,7 +12,8 @@ from rddc.tools import files
 import sys
 sys.path.append("gym-pybullet-drones")
 from rddc.simulation import utils
-from rddc.run.settings.simulation import get_settings
+# from rddc.run.settings.simulation import get_settings
+from rddc.run.settings.simulation_like_experiment import get_settings
 
 from gym_pybullet_drones.envs.BaseAviary import DroneModel, Physics
 from gym_pybullet_drones.envs.CtrlAviary import CtrlAviary
@@ -20,6 +21,7 @@ from rddc.simulation.VariationAviary import VariationAviary
 from gym_pybullet_drones.control.DSLPIDControl import DSLPIDControl
 from gym_pybullet_drones.control.SimplePIDControl import SimplePIDControl
 from rddc.simulation.mellingerController import MellingerControl
+from rddc.simulation.emulatorController import EmulatorControl
 from gym_pybullet_drones.utils.Logger import Logger
 from gym_pybullet_drones.utils.utils import sync, str2bool
 from rddc.simulation.controller import SimpleStateFeedbackController
@@ -55,7 +57,7 @@ def partially_disable_pid(ARGS, ctrl):
         ctrl[i].setPIDCoefficients(
             p_coeff_pos = np.array([.4, .4, 1.25])              * np.array([0, 0, 1]), # x, y, z
             i_coeff_pos = np.array([.05, .05, .05])             * np.array([0, 0, 1]), # x, y,  z integrated
-            d_coeff_pos = np.array([.2, .2, .5])                * np.array([0, 0, 1]), # vx, vy, vz
+            d_coeff_pos = np.array([.2, .2, .4])                * np.array([0, 0, 1]), # vx, vy, vz
             p_coeff_att = np.array([70000., 70000., 60000.])    * np.array([0, 0, 1]), # r, p, y
             i_coeff_att = np.array([.0, .0, 500.])              * np.array([1, 1, 1]), # r, p, y integrated
             d_coeff_att = np.array([20000., 20000., 12000.])    * np.array([1, 1, 1])  # rr, pr, yr
@@ -69,7 +71,7 @@ def enable_pid(ARGS, ctrl):
         ctrl[i].setPIDCoefficients(
             p_coeff_pos = np.array([.4, .4, 1.25])              , # x, y, z
             i_coeff_pos = np.array([.05, .05, .05])             , # x, y,  z integrated
-            d_coeff_pos = np.array([.2, .2, .5])                , # vx, vy, vz
+            d_coeff_pos = np.array([.2, .2, .4])                , # vx, vy, vz
             p_coeff_att = np.array([70000., 70000., 60000.])    , # r, p, y
             i_coeff_att = np.array([.0, .0, 500.])              , # r, p, y integrated
             d_coeff_att = np.array([20000., 20000., 12000.])      # rr, pr, yr
@@ -96,9 +98,9 @@ def reset_sim(env, rnd, args, R, H):
     for j in range(args.num_drones):
         # have to overwrite since for some reason pybullet calculates non-zero yaw in
         # _updateAndStoreKinematicInformation() even if INIT_RPYS is 0
-        env.pos[j] = env.INIT_XYZS
-        env.rpy[j] = env.INIT_RPYS
-        env.quat[j] = p.getQuaternionFromEuler(*env.INIT_RPYS)
+        env.pos[j] = env.INIT_XYZS[j, :]
+        env.rpy[j] = env.INIT_RPYS[j, :]
+        env.quat[j] = p.getQuaternionFromEuler(env.INIT_RPYS[j, :])
         env.vel[j] = np.array([0.,0.,0.])
         env.ang_v[j] = np.array([0.,0.,0.])
 
@@ -138,7 +140,7 @@ def parse_arguments(override_args=None, ignore_cli=False):
     parser.add_argument('--wind_on',            default=False,      type=str2bool,      help='Turn on wind force', metavar='')
     parser.add_argument('--wrap_wp',            default=True,       type=str2bool,      help='Wrap the trajectory. After reaching the last WP, start from the beginning', metavar='')
     parser.add_argument('--simulated_delay_ms', default=0.0,        type=float,         help='Simulation of sfb delay. Specify the latency in ms. Keep 0 to turn it off.', metavar='')
-    parser.add_argument('--pid_type',           default='dsl',      type=str,           help='Type of the pid controller', metavar='', choices=['dsl', 'mellinger', 'simple'])
+    parser.add_argument('--pid_type',           default='dsl',      type=str,           help='Type of the pid controller', metavar='', choices=['dsl', 'mellinger', 'emulator', 'simple'])
 
     if ignore_cli:
         args = parser.parse_args(args=[])
@@ -169,61 +171,66 @@ def run(settings, override_args=None):
 
     PERIOD = 10
     NUM_WP = ARGS.control_freq_hz * PERIOD
-    TARGET_POS = np.zeros((NUM_WP, 3))
-    TARGET_VEL = np.zeros((NUM_WP, 3))
-    TARGET_RPY = np.zeros((NUM_WP, 3))
-    TARGET_RPY_RATE = np.zeros((NUM_WP, 3))
+    TARGET_POS = np.zeros((NUM_WP, 3, ARGS.num_drones))
+    TARGET_VEL = np.zeros((NUM_WP, 3, ARGS.num_drones))
+    TARGET_RPY = np.zeros((NUM_WP, 3, ARGS.num_drones))
+    TARGET_RPY_RATE = np.zeros((NUM_WP, 3, ARGS.num_drones))
 
     if ARGS.traj in ['8']:
         for i in range(NUM_WP):
-            TARGET_POS[i, :] =  R * np.cos((i / NUM_WP) * (2 * np.pi) + np.pi / 2) + INIT_XYZS[0, 0], \
-                                R/2 * np.sin(2*((i / NUM_WP) * (2 * np.pi) + np.pi / 2)) + INIT_XYZS[0, 1], \
-                                INIT_XYZS[0, 2]
-            TARGET_VEL[i, :] =  - 2 * np.pi / PERIOD * R * np.sin((i / NUM_WP) * (2 * np.pi) + np.pi / 2), \
-                                2 * np.pi / PERIOD * R * np.cos(2*((i / NUM_WP) * (2 * np.pi) + np.pi / 2)), \
-                                0.0
+            for drone in range(ARGS.num_drones):
+                TARGET_POS[i, :, drone] =  R * np.cos((i / NUM_WP) * (2 * np.pi) + np.pi / 2) + INIT_XYZS[drone, 0], \
+                                    R/2 * np.sin(2*((i / NUM_WP) * (2 * np.pi) + np.pi / 2)) + INIT_XYZS[drone, 1], \
+                                    INIT_XYZS[drone, 2]
+                TARGET_VEL[i, :, drone] =  - 2 * np.pi / PERIOD * R * np.sin((i / NUM_WP) * (2 * np.pi) + np.pi / 2), \
+                                    2 * np.pi / PERIOD * R * np.cos(2*((i / NUM_WP) * (2 * np.pi) + np.pi / 2)), \
+                                    0.0
         
     elif ARGS.traj in ['circle']:
         for i in range(NUM_WP):
-            TARGET_POS[i, :] =  R * np.cos((i / NUM_WP) * (2 * np.pi) + np.pi / 2) + INIT_XYZS[0, 0], \
-                                R * np.sin((i / NUM_WP) * (2 * np.pi) + np.pi / 2) - R + INIT_XYZS[0, 1], \
-                                INIT_XYZS[0, 2]
+            for drone in range(ARGS.num_drones):
+                TARGET_POS[i, :, drone] =  R * np.cos((i / NUM_WP) * (2 * np.pi) + np.pi / 2) + INIT_XYZS[drone, 0], \
+                                    R * np.sin((i / NUM_WP) * (2 * np.pi) + np.pi / 2) - R + INIT_XYZS[drone, 1], \
+                                    INIT_XYZS[drone, 2]
     elif ARGS.traj in ['hover']:
         for i in range(NUM_WP):
-            TARGET_POS[i, :] =  INIT_XYZS[0, 0], \
-                                INIT_XYZS[0, 1], \
-                                INIT_XYZS[0, 2]
+            for drone in range(ARGS.num_drones):
+                TARGET_POS[i, :, drone] =  INIT_XYZS[drone, 0], \
+                                    INIT_XYZS[drone, 1], \
+                                    INIT_XYZS[drone, 2]
     elif ARGS.traj in ['linex']:
         for i in range(NUM_WP):
-            TARGET_POS[i, :] =  R * np.cos((i / NUM_WP) * (2 * np.pi) + np.pi / 2) + INIT_XYZS[0, 0], \
-                                INIT_XYZS[0, 1], \
-                                INIT_XYZS[0, 2]
+            for drone in range(ARGS.num_drones):
+                TARGET_POS[i, :, drone] =  R * np.cos((i / NUM_WP) * (2 * np.pi) + np.pi / 2) + INIT_XYZS[drone, 0], \
+                                    INIT_XYZS[drone, 1], \
+                                    INIT_XYZS[drone, 2]
     elif ARGS.traj in ['line']:
         dist = 2*np.sqrt(2)*R*np.sqrt(2)*2
         v_max = dist/PERIOD * 1.1
         t_acc = PERIOD - dist/v_max
         i_acc = int(t_acc * ARGS.control_freq_hz)
         for i in range(NUM_WP):
-            TARGET_POS[i, :] =  dist/np.sqrt(2) * (i / NUM_WP) + INIT_XYZS[0, 0], \
-                                dist/np.sqrt(2) * (i / NUM_WP) + INIT_XYZS[0, 1], \
-                                INIT_XYZS[0, 2]
+            for drone in range(ARGS.num_drones):
+                TARGET_POS[i, :, drone] =  dist/np.sqrt(2) * (i / NUM_WP) + INIT_XYZS[drone, 0], \
+                                    dist/np.sqrt(2) * (i / NUM_WP) + INIT_XYZS[drone, 1], \
+                                    INIT_XYZS[drone, 2]
             if i < i_acc:
-                TARGET_VEL[i, :] =  v_max/np.sqrt(2) * (i/i_acc), \
+                TARGET_VEL[i, :, drone] =  v_max/np.sqrt(2) * (i/i_acc), \
                                     v_max/np.sqrt(2) * (i/i_acc), \
                                     0.0
             elif i > (NUM_WP-i_acc-1):
-                TARGET_VEL[i, :] =  v_max/np.sqrt(2) * ((NUM_WP - i-1)/i_acc), \
+                TARGET_VEL[i, :, drone] =  v_max/np.sqrt(2) * ((NUM_WP - i-1)/i_acc), \
                                     v_max/np.sqrt(2) * ((NUM_WP - i-1)/i_acc), \
                                     0.0
             else:
-                TARGET_VEL[i, :] =  v_max/np.sqrt(2),\
+                TARGET_VEL[i, :, drone] =  v_max/np.sqrt(2),\
                                     v_max/np.sqrt(2),\
                                     0.0
 
     else:
         print("Error: specified an unknown trajectory")
         raise NotImplementedError
-    TARGET_VEL[0, :] = [0,0,0]
+    # TARGET_VEL[0, :, drone] = [0,0,0]
 
     wp_counters = np.array([int((i*NUM_WP/6)%NUM_WP) for i in range(ARGS.num_drones)])
 
@@ -271,9 +278,9 @@ def run(settings, override_args=None):
         for j in range(ARGS.num_drones):
             # have to overwrite since for some reason pybullet calculates non-zero yaw in
             # _updateAndStoreKinematicInformation() even if INIT_RPYS is 0
-            env.pos[j] = env.INIT_XYZS
-            env.rpy[j] = env.INIT_RPYS
-            env.quat[j] = p.getQuaternionFromEuler(*env.INIT_RPYS)
+            env.pos[j] = env.INIT_XYZS[j, :]
+            env.rpy[j] = env.INIT_RPYS[j, :]
+            env.quat[j] = p.getQuaternionFromEuler(env.INIT_RPYS[j, :])
             env.vel[j] = np.array([0.,0.,0.])
             env.ang_v[j] = np.array([0.,0.,0.])
 
@@ -294,6 +301,15 @@ def run(settings, override_args=None):
     # ctrl = [DSLPIDControl(drone_model=ARGS.drone) for i in range(ARGS.num_drones)]
     if ARGS.pid_type in ['mellinger']:
         ctrl = [MellingerControl(drone_model=ARGS.drone) for i in range(ARGS.num_drones)]
+    if ARGS.pid_type in ['emulator']:
+        extra_loads = settings['extra_loads']
+        ctrl = [EmulatorControl(
+            drone_model=ARGS.drone,
+            load_mass=extra_loads[i]['mass'],
+            load_J=extra_loads[i]['J'],
+            load_pos=extra_loads[i]['position']
+        )
+        for i in range(ARGS.num_drones)]
     elif ARGS.pid_type in ['simple']:
         ctrl = [SimplePIDControl(drone_model=ARGS.drone) for i in range(ARGS.num_drones)]
     elif ARGS.pid_type in ['dsl']:
@@ -387,10 +403,10 @@ def run(settings, override_args=None):
                 # cur_rpy_rate= states[13:16]
                 last_rpy    = lastObs[str(j)]["state"][7:10]
                 cur_rpy_rate= (cur_rpy - last_rpy)*env.SIM_FREQ
-                d_pos = cur_pos - TARGET_POS[wp_counters[j], :]
-                d_vel = cur_vel - TARGET_VEL[wp_counters[j], :]
-                d_rpy = cur_rpy - TARGET_RPY[wp_counters[j], :]
-                d_rpy_rate = cur_rpy_rate - TARGET_RPY_RATE[wp_counters[j], :]
+                d_pos = cur_pos - TARGET_POS[wp_counters[j], :, j]
+                d_vel = cur_vel - TARGET_VEL[wp_counters[j], :, j]
+                d_rpy = cur_rpy - TARGET_RPY[wp_counters[j], :, j]
+                d_rpy_rate = cur_rpy_rate - TARGET_RPY_RATE[wp_counters[j], :, j]
                 trajectories[j]['X1'][0:3, traj_counters[j]] = d_pos
                 trajectories[j]['X1'][3:6, traj_counters[j]] = d_vel
                 trajectories[j]['X1'][6:9, traj_counters[j]] = d_rpy
@@ -440,10 +456,10 @@ def run(settings, override_args=None):
                 cur_vel     = states[10:13]
                 last_rpy    = lastObs[str(j)]["state"][7:10]
                 cur_rpy_rate= (cur_rpy - last_rpy)*env.SIM_FREQ
-                d_pos = cur_pos - TARGET_POS[wp_counters[j], :]
-                d_vel = cur_vel - TARGET_VEL[wp_counters[j], :]
-                d_rpy = cur_rpy - TARGET_RPY[wp_counters[j], :]
-                d_rpy_rate = cur_rpy_rate - TARGET_RPY_RATE[wp_counters[j], :]
+                d_pos = cur_pos - TARGET_POS[wp_counters[j], :, j]
+                d_vel = cur_vel - TARGET_VEL[wp_counters[j], :, j]
+                d_rpy = cur_rpy - TARGET_RPY[wp_counters[j], :, j]
+                d_rpy_rate = cur_rpy_rate - TARGET_RPY_RATE[wp_counters[j], :, j]
 
                 if ARGS.sfb is not None:
                     input_correction = lqr[j].computeControl(d_pos, d_vel, d_rpy, d_rpy_rate)
@@ -454,10 +470,10 @@ def run(settings, override_args=None):
                     # input_correction += ctrl_noise*(0.2+np.linalg.norm(d_state, np.Inf))
                     input_correction += ctrl_noise
 
-                TARGET_POS_COR[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :]       = TARGET_POS[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :] + input_correction[0:3]
-                TARGET_VEL_COR[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :]       = TARGET_VEL[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :] + input_correction[3:6]
-                TARGET_RPY_COR[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :]       = TARGET_RPY[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :] + input_correction[6:9]
-                TARGET_RPY_RATE_COR[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :]  = TARGET_RPY_RATE[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :] + input_correction[9:12]
+                TARGET_POS_COR[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :, j]       = TARGET_POS[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :, j] + input_correction[0:3]
+                TARGET_VEL_COR[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :, j]       = TARGET_VEL[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :, j] + input_correction[3:6]
+                TARGET_RPY_COR[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :, j]       = TARGET_RPY[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :, j] + input_correction[6:9]
+                TARGET_RPY_RATE_COR[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :, j]  = TARGET_RPY_RATE[wp_counters[j]+d:wp_counters[j]+CTRL_PER_SFB+d, :, j] + input_correction[9:12]
 
                 trajectories[j]['X0'][0:3, traj_counters[j]] = d_pos
                 trajectories[j]['X0'][3:6, traj_counters[j]] = d_vel
@@ -495,10 +511,10 @@ def run(settings, override_args=None):
                         control_timestep=CTRL_EVERY_N_STEPS*env.TIMESTEP,
                         state=obs[str(j)]["state"],
                         # target_pos=np.hstack([TARGET_POS[wp_counters[j], 0:2], INIT_XYZS[j, 2]]),
-                        target_pos=TARGET_POS_COR[wp_counters[j], :] + proc_noise[0:3],
-                        target_vel=TARGET_VEL_COR[wp_counters[j], :] + proc_noise[3:6],
-                        target_rpy=TARGET_RPY_COR[wp_counters[j], :] + proc_noise[6:9],
-                        target_rpy_rates=TARGET_RPY_RATE_COR[wp_counters[j], :] + proc_noise[9:12],
+                        target_pos=TARGET_POS_COR[wp_counters[j], :, j] + proc_noise[0:3],
+                        target_vel=TARGET_VEL_COR[wp_counters[j], :, j] + proc_noise[3:6],
+                        target_rpy=TARGET_RPY_COR[wp_counters[j], :, j] + proc_noise[6:9],
+                        target_rpy_rates=TARGET_RPY_RATE_COR[wp_counters[j], :, j] + proc_noise[9:12],
                     )
                 except ValueError:
                     print('Value Error detected')
@@ -522,15 +538,15 @@ def run(settings, override_args=None):
                     cur_rpy,
                     cur_rpy_rate]))
                 reference['targets'][j].append(np.hstack([
-                    TARGET_POS_COR[wp_counters[j], :],
-                    TARGET_VEL_COR[wp_counters[j], :],
-                    TARGET_RPY_COR[wp_counters[j], :],
-                    TARGET_RPY_RATE_COR[wp_counters[j], :]]))
+                    TARGET_POS_COR[wp_counters[j], :, j],
+                    TARGET_VEL_COR[wp_counters[j], :, j],
+                    TARGET_RPY_COR[wp_counters[j], :, j],
+                    TARGET_RPY_RATE_COR[wp_counters[j], :, j]]))
                 reference['orig_targets'][j].append(np.hstack([
-                    TARGET_POS[wp_counters[j], :],
-                    TARGET_VEL[wp_counters[j], :],
-                    TARGET_RPY[wp_counters[j], :],
-                    TARGET_RPY_RATE[wp_counters[j], :]]))
+                    TARGET_POS[wp_counters[j], :, j],
+                    TARGET_VEL[wp_counters[j], :, j],
+                    TARGET_RPY[wp_counters[j], :, j],
+                    TARGET_RPY_RATE[wp_counters[j], :, j]]))
                 if sfb_on:
                     if ARGS.wrap_wp:
                         wp_counters[j] = wp_counters[j] + 1 if wp_counters[j] < (NUM_WP-1) else 0
@@ -543,7 +559,7 @@ def run(settings, override_args=None):
                     timestamp=i/env.SIM_FREQ,
                     state= obs[str(j)]["state"],
                     #control=np.hstack([TARGET_POS[wp_counters[j], 0:2], INIT_XYZS[j, 2], INIT_RPYS[j, :], np.zeros(6)])
-                    control=np.hstack([INIT_XYZS[j, :]+TARGET_POS[wp_counters[j], :], INIT_RPYS[j, :], np.zeros(6)])
+                    control=np.hstack([INIT_XYZS[j, :]+TARGET_POS[wp_counters[j], :, j], INIT_RPYS[j, :], np.zeros(6)])
                     )
 
         # Draw the drone trajectories
