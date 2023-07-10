@@ -26,7 +26,7 @@ class MellingerControl(BaseControl):
 
     def __init__(self,
                  drone_model: DroneModel,
-                 g: float=9.81
+                 g: float=9.8
                  ):
         """Common control classes __init__ method.
 
