@@ -564,27 +564,27 @@ def robust_lqr_scenario_slemma(trajectories, noiseInfo, perfInfo, verbosity=1):
     problem.options.solver = 'mosek'
     problem.set_option('mosek_params', {'MSK_IPAR_NUM_THREADS': 1})
 
-    # v_X = pc.SymmetricVariable('X', (m,m))
+    v_X = pc.SymmetricVariable('X', (m,m))
     v_P = pc.SymmetricVariable('P', (n,n)) # ~= Y?
     v_L = pc.RealVariable('L', (m,n)) # ~= U0M?
     v_a = pc.RealVariable('a')
     v_b = pc.RealVariable('b')
 
-    # problem.set_objective('min', pc.trace(Q*v_P) + pc.trace(v_X))
-    problem.set_objective(None)
+    problem.set_objective('min', pc.trace(Q*v_P) + pc.trace(v_X))
+    # problem.set_objective(None)
     # problem.set_objective('max', v_b)
 
-    # perf00 = v_X
-    # perf01 = np.sqrt(R)  * v_L
-    # perf11 = v_P
-    # perf = (
-    #     (perf00     & perf01) //
-    #     (perf01.T   & perf11)
-    # )
+    perf00 = v_X
+    perf01 = np.sqrt(R)  * v_L
+    perf11 = v_P
+    perf = (
+        (perf00     & perf01) //
+        (perf01.T   & perf11)
+    )
 
-    # problem.add_constraint(perf >> 0)
-    # problem.add_constraint(v_X >> 0)
-    problem.add_constraint(v_P >> 0)
+    problem.add_constraint(perf >> 0)
+    problem.add_constraint(v_X >> 1e-6)
+    problem.add_constraint(v_P >> 1e-6)
     problem.add_constraint(v_a >= 0)
     problem.add_constraint(v_b > 0)
 
