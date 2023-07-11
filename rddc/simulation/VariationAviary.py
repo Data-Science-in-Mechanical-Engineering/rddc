@@ -33,7 +33,8 @@ class VariationAviary(CtrlAviary):
                  vision_attributes=False,
                  dynamics_attributes=False,
                  output_folder='results',
-                 wind_force_vector = [0.,0.,0.]
+                 wind_force_vector = [0.,0.,0.],
+                 extra_loads = list(),
                  ):
         """Initialization of a generic aviary environment.
 
@@ -109,6 +110,8 @@ class VariationAviary(CtrlAviary):
         self.COM_XYZ = self._parseURDFParameters()
         print("[INFO] BaseAviary.__init__() loaded parameters from the drone's .urdf:\n[INFO] m {:f}, L {:f},\n[INFO] ixx {:f}, ixy {:f}, ixz {:f}, iyy {:f}, iyz {:f}, izz {:f},\n[INFO] kf {:f}, km {:f},\n[INFO] t2w {:f}, max_speed_kmh {:f},\n[INFO] gnd_eff_coeff {:f}, prop_radius {:f},\n[INFO] drag_xy_coeff {:f}, drag_z_coeff {:f},\n[INFO] dw_coeff_1 {:f}, dw_coeff_2 {:f}, dw_coeff_3 {:f}, com_xyz {}".format(
             self.M, self.L, self.J[0,0], self.J[0,1], self.J[0,2], self.J[1,1], self.J[1,2], self.J[2,2], self.KF, self.KM, self.THRUST2WEIGHT_RATIO, self.MAX_SPEED_KMH, self.GND_EFF_COEFF, self.PROP_RADIUS, self.DRAG_COEFF[0], self.DRAG_COEFF[2], self.DW_COEFF_1, self.DW_COEFF_2, self.DW_COEFF_3, self.COM_XYZ))
+        #### Compute adjustements due to extra loads ###############
+        self.extra_loads = extra_loads
         #### Compute constants #####################################
         self.GRAVITY = self.G * self.M
         # self.WIND = np.array(wind_acc_vector)
@@ -236,6 +239,26 @@ class VariationAviary(CtrlAviary):
             The ordinal number/position of the desired drone in list self.DRONE_IDS.
 
         """
+        #### New dynamics due to extra loads #######################
+        if len(self.extra_loads)>0:
+            dJ = self.extra_loads[nth_drone]['J']
+            dm = self.extra_loads[nth_drone]['mass']
+            dx = self.extra_loads[nth_drone]['position']
+            J = self.J + dJ
+            J_INV = np.linalg.inv(J)
+            M = self.M + dm
+            GRAVITY = self.G * M
+            COM_XYZ =(self.COM_XYZ * self.M + dm * dx) / M
+        else: #empty extra_loads means we're doing variations through urdf files
+            J = self.J
+            J_INV = self.J_INV
+            M = self.M
+            GRAVITY = self.GRAVITY
+            COM_XYZ = self.COM_XYZ
+        # print(f"J:\n {np.array_str(J, precision=5)}")
+        # print(f"M:          {M}")
+        # print(f"Gravity:    {GRAVITY}")
+        # print(f"COM_XYZ:    {COM_XYZ}")
         #### Current state #########################################
         pos = self.pos[nth_drone,:]
         quat = self.quat[nth_drone,:]
@@ -247,10 +270,9 @@ class VariationAviary(CtrlAviary):
         forces = np.array(rpm**2) * self.KF
         thrust = np.array([0, 0, np.sum(forces)])
         thrust_world_frame = np.dot(rotation, thrust)
-        force_world_frame = thrust_world_frame - np.array([0, 0, self.GRAVITY]) + self.WIND_FORCE
+        force_world_frame = thrust_world_frame - np.array([0, 0, GRAVITY]) + self.WIND_FORCE
         inverse_rotation = np.array(p.getMatrixFromQuaternion([quat[0], -quat[1], -quat[2], -quat[3]])).reshape(3, 3)
-        gravity_drone_frame = np.dot(inverse_rotation, np.array([0, 0, -self.GRAVITY]))
-        
+        gravity_drone_frame = np.dot(inverse_rotation, np.array([0, 0, -GRAVITY]))
         # Torques from the rotors
         z_torques = np.array(rpm**2)*self.KM
         z_torque = (-z_torques[0] + z_torques[1] - z_torques[2] + z_torques[3])
@@ -263,10 +285,10 @@ class VariationAviary(CtrlAviary):
             raise NotImplementedError
         torques = np.array([x_torque, y_torque, z_torque])
         # Torques from the gravity appplied to asymmetric COM
-        torques = torques + np.cross(self.COM_XYZ, gravity_drone_frame)
-        torques = torques - np.cross(rpy_rates, np.dot(self.J, rpy_rates))
-        rpy_rates_deriv = np.dot(self.J_INV, torques)
-        no_pybullet_dyn_accs = force_world_frame / self.M
+        torques = torques + np.cross(COM_XYZ, gravity_drone_frame)
+        torques = torques - np.cross(rpy_rates, np.dot(J, rpy_rates))
+        rpy_rates_deriv = np.dot(J_INV, torques)
+        no_pybullet_dyn_accs = force_world_frame / M
         #### Update state ##########################################
         vel = vel + self.TIMESTEP * no_pybullet_dyn_accs
         rpy_rates = rpy_rates + self.TIMESTEP * rpy_rates_deriv
