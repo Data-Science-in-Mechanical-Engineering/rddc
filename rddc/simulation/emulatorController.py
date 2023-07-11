@@ -60,6 +60,7 @@ class EmulatorControl(BaseControl):
         self.D_COEFF_TOR = np.array([20000., 20000., 12000.])
         self.DD_COEFF_TOR = np.array([200., 200., 0.])                                                  #DIFFERENCE 2: kd_omega_rp = 200
 
+        self.L = self._getURDFParameter('arm')
         self.ORIG_MASS = 0.027 # crazyflie mass, assumed in the original controller design
         self.G_VEC = np.array([0., 0., -g])
         self.EMUL_MASS = load_mass
@@ -171,12 +172,33 @@ class EmulatorControl(BaseControl):
 
     ################################################################################
 
-    def _torques_through_extra_mass(self, torques, cur_quat, cur_rpy_rate, cur_rpy_rate_derv):
+    def _torque_SI2pwm(self, torques_SI):
+        # print(f"torques_SI : {torques_SI}")
+        # print(f"multipliers : {np.array([np.sqrt(2)/(self.KF*self.L), np.sqrt(2)/(self.KF*self.L), 1/self.KM])}")
+        signs = np.sign(torques_SI)
+        torques_SI = torques_SI*signs
+        torques_rpm =  np.sqrt(
+            torques_SI * np.array([
+                np.sqrt(2)/(self.KF*self.L),
+                np.sqrt(2)/(self.KF*self.L),
+                1/self.KM
+            ])
+        )
+        torques_pwm = (torques_rpm - self.PWM2RPM_CONST)/self.PWM2RPM_SCALE
+        # torques_pwm = torques_rpm
+        return torques_pwm * signs
+        
+    ################################################################################
+
+    def _torques_through_extra_mass(self, control_torques, cur_quat, cur_rpy_rate, cur_rpy_rate_derv):
         """
         transforms the given vector of torque control inputs so that it makes
         the whole drone act as if it had an additional mass attached.
         This mass is specified with load_mass, load_J, load_pos inputs 
         in the class contructor.
+
+        incoming torques have the unit of [pwm], so we also need to keep it at the output
+        therefore, variables in SI units (constant_torque, J, nu, ...) need to be converted to [pwm]
         """
         cur_rotation = np.array(p.getMatrixFromQuaternion(cur_quat)).reshape(3, 3)
         cur_rpy = np.array(p.getEulerFromQuaternion(cur_quat))
@@ -199,11 +221,17 @@ class EmulatorControl(BaseControl):
         # gyroscopic_force = self.ORIG_J[2, 2] @ np.cross(nu, np.array([0., 0., np.sum(rpm)]))
         # print(f"JJ' \n: {np.array_str(self.J_X_INV_EMUL_J, precision=4)}")
         # print(f"constant_torque: {np.array_str(constant_torque, precision=4)}")
-        corrected_torques = torques \
-            + constant_torque \
-            - (self.EMUL_J - self.ORIG_J) @ nu_dot \
+        inertial_torque = - (self.EMUL_J - self.ORIG_J) @ nu_dot \
             - np.cross(nu, (self.EMUL_J - self.ORIG_J) @ nu)
             # + gyroscopic_forces @ (np.eye(3) - self.J_X_INV_EMUL_J)
+        extra_torques = constant_torque + inertial_torque
+        corrected_torques = control_torques + self._torque_SI2pwm(extra_torques)
+        # print(f"  constant_torque: {np.array_str(constant_torque, precision=3)} Nm")
+        # print(f"+ inertial_torque: {np.array_str(inertial_torque, precision=3)} Nm")
+        # print(f"=                : {np.array_str(extra_torques, precision=3)} Nm")
+        # print(f"-> into PWM      : {np.array_str(self._torque_SI2pwm(extra_torques), precision=1)}")
+        # print(f"  control_torques: {np.array_str(control_torques, precision=1)}")
+        # print(f"corrected_torques: {np.array_str(corrected_torques, precision=1)}")
         return corrected_torques
 
     ################################################################################
@@ -258,7 +286,7 @@ class EmulatorControl(BaseControl):
                             + np.multiply(self.D_COEFF_FOR, vel_e) + np.array([0, 0, self.GRAVITY])
         target_thrust = self.ORIG_MASS / (self.ORIG_MASS + self.EMUL_MASS) * target_thrust
         scalar_thrust = max(0., np.dot(target_thrust, cur_rotation[:,2]))
-        thrust = (math.sqrt(scalar_thrust / (4*self.KF)) - self.PWM2RPM_CONST) / self.PWM2RPM_SCALE
+        thrust = (math.sqrt(scalar_thrust / (4*self.KF)) - self.PWM2RPM_CONST) / self.PWM2RPM_SCALE #conversion from Newtons to pwm
         target_z_ax = target_thrust / np.linalg.norm(target_thrust)
         target_x_c = np.array([math.cos(target_rpy[2]), math.sin(target_rpy[2]), 0])
         target_y_ax = np.cross(target_z_ax, target_x_c) / np.linalg.norm(np.cross(target_z_ax, target_x_c))
