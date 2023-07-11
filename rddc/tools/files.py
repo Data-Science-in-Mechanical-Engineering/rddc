@@ -17,6 +17,23 @@ def get_variable_location(name, settings):
     else:
         raise NotImplementedError
 
+def get_simulation_trajectory_path(settings, train_or_test, reference=False, seed=None):
+    if seed is not None:
+        seed_suffix = '_seed' + str(seed)
+    else:
+        seed_suffix = ''
+    if reference:
+        reference_suffix = '_reference'
+    else:
+        reference_suffix = ''
+    filepath = os.path.join(
+        'data', 
+        settings['name'], 
+        settings['suffix'], 
+        train_or_test + '_' + settings[train_or_test + 'Settings']['traj'] + seed_suffix + reference_suffix
+    )
+    return filepath
+
 def get_suffix_part(name, value):
     if isinstance(value, int):
         value_str = str(value)
