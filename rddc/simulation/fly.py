@@ -14,6 +14,7 @@ sys.path.append("gym-pybullet-drones")
 from rddc.simulation import utils
 # from rddc.run.settings.simulation import get_settings
 from rddc.run.settings.simulation_like_experiment import get_settings
+from rddc.tools.files import get_simulation_trajectory_path
 
 from gym_pybullet_drones.envs.BaseAviary import DroneModel, Physics
 from gym_pybullet_drones.envs.CtrlAviary import CtrlAviary
@@ -77,25 +78,73 @@ def enable_pid(ARGS, ctrl):
             d_coeff_att = np.array([20000., 20000., 12000.])      # rr, pr, yr
         )
 
-def get_init_xyzs(rnd, spread, num_drones, R, H):
-    INIT_XYZS = np.array(
-        [  [R * np.cos((i / 10) * (2 * np.pi) + np.pi / 2),
-            R/2 * np.sin(2*((i / 10) * (2 * np.pi) + np.pi / 2)),
-            H] + np.multiply((2*rnd.random(3)-1), np.array([1,1,0])*spread) #don't randomize z since we're not interested in it
-        for i in range(num_drones)])
+def get_gerono_lemniscate_point_at_phase(R, H, phi):
+    return [
+        R   * np.cos(phi),
+        R/2 * np.sin(2*phi),
+        H
+    ]
+
+def get_gerono_lemniscate_vel_at_phase(R, H, T, phi):
+    return [
+        -2*np.pi/T * R * np.sin(phi),
+         2*np.pi/T * R * np.cos(2*phi),
+        0.
+    ]
+
+def get_circle_point_at_phase(R, H, phi):
+    return [
+        R * np.cos(phi),
+        R * np.sin(phi),
+        H
+    ]
+
+def get_circle_vel_at_phase(R, H, T, phi):
+    return [
+        -2*np.pi/T * R * np.sin(phi),
+         2*np.pi/T * R * np.cos(phi),
+        H
+    ]
+
+def get_init_xyzs(rnd, ARGS, R, H):
+    spread = ARGS.init_xyzs_spread
+    num_drones = ARGS.num_drones
+    if ARGS.traj in ['8']:
+        init_phi = np.pi/2
+        INIT_XYZS = np.array([
+            get_gerono_lemniscate_point_at_phase(R, H, init_phi)
+            for _ in range(num_drones)
+        ])
+    elif ARGS.traj in ['circle']:
+        init_phi = 0
+        INIT_XYZS = np.array([
+            get_circle_point_at_phase(R, H, init_phi)
+            for _ in range(num_drones)
+        ])
+    elif ARGS.traj in ['hover', 'line', 'linex']:
+        INIT_XYZS = np.array([
+            [0.,0.,H] + (2*rnd.random(3)-1)*np.array([1,1,0])*spread #don't randomize z since we're not interested in it
+            for _ in range(num_drones)
+        ])
+    else:
+        print("Error: specified an unknown trajectory")
+        raise NotImplementedError
     return INIT_XYZS
 
-def get_init_rpys(rnd, spread, num_drones):
-    INIT_RPYS = np.array(
-        [   [0, 0, 0] + (2*rnd.random(3)-1)*np.array([1,1,0])*spread
-        for _ in range(num_drones)])
+def get_init_rpys(rnd, ARGS):
+    spread = ARGS.init_xyzs_spread
+    num_drones = ARGS.num_drones
+    INIT_RPYS = np.array([
+        [0, 0, 0] + (2*rnd.random(3)-1)*np.array([1,1,0])*spread
+        for _ in range(num_drones)
+    ])
     return INIT_RPYS
 
-def reset_sim(env, rnd, args, R, H):
-    env.INIT_XYZS = get_init_xyzs(rnd, args.init_xyzs_spread, args.num_drones, R, H)
-    env.INIT_RPYS = get_init_rpys(rnd, args.init_rpys_spread, args.num_drones)
+def reset_sim(env, rnd, ARGS, R, H):
+    env.INIT_XYZS = get_init_xyzs(rnd, ARGS, R, H)
+    env.INIT_RPYS = get_init_rpys(rnd, ARGS)
     env.reset()
-    for j in range(args.num_drones):
+    for j in range(ARGS.num_drones):
         # have to overwrite since for some reason pybullet calculates non-zero yaw in
         # _updateAndStoreKinematicInformation() even if INIT_RPYS is 0
         env.pos[j] = env.INIT_XYZS[j, :]
@@ -129,7 +178,7 @@ def parse_arguments(override_args=None, ignore_cli=False):
     parser.add_argument('--sfb',                default=None,       type=str,           help='Enable robust state feedback', metavar='', choices=[None, 'direct', 'indirect', 'prelim'])
     parser.add_argument('--ctrl_noise',         default=0.0,        type=float,         help='Reference trajectory input signal noise', metavar='')
     parser.add_argument('--proc_noise',         default=0.0,        type=float,         help='Process noise', metavar='')
-    parser.add_argument('--traj',               default="hover",    type=str,           help='Trajectory to fly: hover, 8 or circle', metavar='')
+    parser.add_argument('--traj',               default="hover",    type=str,           help='Trajectory to fly', metavar='', choices=['8', 'hover', 'circle', 'linex', 'line'])
     parser.add_argument('--calc_cost',          default=False,      type=str2bool,      help='Whether to calculate and save LQR cost', metavar='')
     parser.add_argument('--part_pid_off',       default=True,       type=str2bool,      help='Tell PID to not control some states', metavar='')
     parser.add_argument('--traj_filename',      default=None,       type=str,           help='Filename to save the resulting trajectory in', metavar='')
@@ -164,9 +213,9 @@ def run(settings, override_args=None):
     #### Initialize the simulation #############################
     H = 0.8
     R = .5
-    
-    INIT_XYZS = get_init_xyzs(rnd, ARGS.init_xyzs_spread, ARGS.num_drones, R, H)
-    INIT_RPYS = get_init_rpys(rnd, ARGS.init_rpys_spread, ARGS.num_drones)
+
+    INIT_XYZS = get_init_xyzs(rnd, ARGS, R, H)
+    INIT_RPYS = get_init_rpys(rnd, ARGS)
     AGGR_PHY_STEPS = int(ARGS.simulation_freq_hz/ARGS.control_freq_hz) if ARGS.aggregate else 1
 
     PERIOD = 10
@@ -177,30 +226,28 @@ def run(settings, override_args=None):
     TARGET_RPY_RATE = np.zeros((NUM_WP, 3, ARGS.num_drones))
 
     if ARGS.traj in ['8']:
-        for i in range(NUM_WP):
-            for drone in range(ARGS.num_drones):
-                TARGET_POS[i, :, drone] =  R * np.cos((i / NUM_WP) * (2 * np.pi) + np.pi / 2) + INIT_XYZS[drone, 0], \
-                                    R/2 * np.sin(2*((i / NUM_WP) * (2 * np.pi) + np.pi / 2)) + INIT_XYZS[drone, 1], \
-                                    INIT_XYZS[drone, 2]
-                TARGET_VEL[i, :, drone] =  - 2 * np.pi / PERIOD * R * np.sin((i / NUM_WP) * (2 * np.pi) + np.pi / 2), \
-                                    2 * np.pi / PERIOD * R * np.cos(2*((i / NUM_WP) * (2 * np.pi) + np.pi / 2)), \
-                                    0.0
-        
+        for drone in range(ARGS.num_drones):
+            for i in range(NUM_WP):
+                t = i/NUM_WP * PERIOD
+                phi = t/PERIOD * 2*np.pi + np.pi/2
+                TARGET_POS[i, :, drone] =  get_gerono_lemniscate_point_at_phase(R, H, phi)
+                TARGET_VEL[i, :, drone] =  get_gerono_lemniscate_vel_at_phase(R, H, PERIOD, phi)
     elif ARGS.traj in ['circle']:
-        for i in range(NUM_WP):
-            for drone in range(ARGS.num_drones):
-                TARGET_POS[i, :, drone] =  R * np.cos((i / NUM_WP) * (2 * np.pi) + np.pi / 2) + INIT_XYZS[drone, 0], \
-                                    R * np.sin((i / NUM_WP) * (2 * np.pi) + np.pi / 2) - R + INIT_XYZS[drone, 1], \
-                                    INIT_XYZS[drone, 2]
+        for drone in range(ARGS.num_drones):
+            for i in range(NUM_WP):
+                t = i/NUM_WP * PERIOD
+                phi = t/PERIOD * 2*np.pi
+                TARGET_POS[i, :, drone] =  get_circle_point_at_phase(R, H, phi)
+                TARGET_VEL[i, :, drone] =  get_circle_vel_at_phase(R, H, PERIOD, phi)
     elif ARGS.traj in ['hover']:
-        for i in range(NUM_WP):
-            for drone in range(ARGS.num_drones):
+        for drone in range(ARGS.num_drones):
+            for i in range(NUM_WP):
                 TARGET_POS[i, :, drone] =  INIT_XYZS[drone, 0], \
                                     INIT_XYZS[drone, 1], \
                                     INIT_XYZS[drone, 2]
     elif ARGS.traj in ['linex']:
-        for i in range(NUM_WP):
-            for drone in range(ARGS.num_drones):
+        for drone in range(ARGS.num_drones):
+            for i in range(NUM_WP):
                 TARGET_POS[i, :, drone] =  R * np.cos((i / NUM_WP) * (2 * np.pi) + np.pi / 2) + INIT_XYZS[drone, 0], \
                                     INIT_XYZS[drone, 1], \
                                     INIT_XYZS[drone, 2]
@@ -209,8 +256,8 @@ def run(settings, override_args=None):
         v_max = dist/PERIOD * 1.1
         t_acc = PERIOD - dist/v_max
         i_acc = int(t_acc * ARGS.control_freq_hz)
-        for i in range(NUM_WP):
-            for drone in range(ARGS.num_drones):
+        for drone in range(ARGS.num_drones):
+            for i in range(NUM_WP):
                 TARGET_POS[i, :, drone] =  dist/np.sqrt(2) * (i / NUM_WP) + INIT_XYZS[drone, 0], \
                                     dist/np.sqrt(2) * (i / NUM_WP) + INIT_XYZS[drone, 1], \
                                     INIT_XYZS[drone, 2]
@@ -226,13 +273,12 @@ def run(settings, override_args=None):
                 TARGET_VEL[i, :, drone] =  v_max/np.sqrt(2),\
                                     v_max/np.sqrt(2),\
                                     0.0
-
     else:
         print("Error: specified an unknown trajectory")
         raise NotImplementedError
-    # TARGET_VEL[0, :, drone] = [0,0,0]
 
-    wp_counters = np.array([int((i*NUM_WP/6)%NUM_WP) for i in range(ARGS.num_drones)])
+    # wp_counters = np.array([int((i*NUM_WP/6)%NUM_WP) for i in range(ARGS.num_drones)])
+    wp_counters = np.array([0 for i in range(ARGS.num_drones)])
 
     TARGET_POS_COR = TARGET_POS.copy()
     TARGET_VEL_COR = TARGET_VEL.copy()
@@ -246,6 +292,7 @@ def run(settings, override_args=None):
         ARGS.duration_sec = ARGS.num_samples / ARGS.sfb_freq_hz
 
     #### Create the environment with or without video capture ##
+    extra_loads = list() if settings['use_urdf'] else settings['extra_loads']
     if ARGS.variation: 
         env = VariationAviary(  drone_model=ARGS.drone,
                                 num_drones=ARGS.num_drones,
@@ -258,7 +305,8 @@ def run(settings, override_args=None):
                                 gui=ARGS.gui,
                                 record=ARGS.record_video,
                                 obstacles=ARGS.obstacles,
-                                user_debug_gui=ARGS.user_debug_gui
+                                user_debug_gui=ARGS.user_debug_gui,
+                                extra_loads=extra_loads,
                                 )
     else: 
         env = CtrlAviary(   drone_model=ARGS.drone,
@@ -302,7 +350,9 @@ def run(settings, override_args=None):
     if ARGS.pid_type in ['mellinger']:
         ctrl = [MellingerControl(drone_model=ARGS.drone) for i in range(ARGS.num_drones)]
     if ARGS.pid_type in ['emulator']:
-        extra_loads = settings['extra_loads']
+        if ARGS.variation:
+            print("ERROR: can't have variationAviary and emulatorController at the same time")
+            raise NotImplementedError
         ctrl = [EmulatorControl(
             drone_model=ARGS.drone,
             load_mass=extra_loads[i]['mass'],
@@ -483,7 +533,7 @@ def run(settings, override_args=None):
                 trajectories[j]['U0'][3:6, traj_counters[j]] = input_correction[3:6]
                 trajectories[j]['U0'][6:9, traj_counters[j]] = input_correction[6:9]
                 trajectories[j]['U0'][9:12, traj_counters[j]] = input_correction[9:12]
-                print(f"Finished {traj_counters[j]}'s sample")
+                print(f"Finished sample #{traj_counters[j]}")
 
                 # check the state vector for signs of instability
                 d_state = np.concatenate([d_pos, d_vel, d_rpy])
@@ -559,7 +609,7 @@ def run(settings, override_args=None):
                     timestamp=i/env.SIM_FREQ,
                     state= obs[str(j)]["state"],
                     #control=np.hstack([TARGET_POS[wp_counters[j], 0:2], INIT_XYZS[j, 2], INIT_RPYS[j, :], np.zeros(6)])
-                    control=np.hstack([INIT_XYZS[j, :]+TARGET_POS[wp_counters[j], :, j], INIT_RPYS[j, :], np.zeros(6)])
+                    control=np.hstack([TARGET_POS[wp_counters[j], :, j], INIT_RPYS[j, :], np.zeros(6)])
                     )
 
         # Draw the drone trajectories
@@ -630,24 +680,27 @@ def run(settings, override_args=None):
         files.save_dict_npy(os.path.join(logger.OUTPUT_FOLDER, "performance-"+datetime.now().strftime("%m.%d.%Y_%H.%M.%S")+".npy"), {'costs':costs})
 
     if ARGS.traj_filename is None:
-        traj_filename = "trajectory-sfb-rate-"+datetime.now().strftime("%m.%d.%Y_%H.%M.%S")
+        # traj_filename = "trajectory-sfb-rate-"+datetime.now().strftime("%m.%d.%Y_%H.%M.%S")
+        train_or_test = 'train' if ARGS.sfb is None else 'test'
+        traj_filename = get_simulation_trajectory_path(settings, train_or_test)
     else:
         traj_filename = ARGS.traj_filename
-        np.save(os.path.join(logger.OUTPUT_FOLDER, traj_filename+".npy"), trajectories, allow_pickle=True)
-
-    ##  Additional save of PID candidates and its performance
+    np.save(traj_filename+".npy", trajectories, allow_pickle=True)
 
     reference['timestamps'] = np.array(reference['timestamps'])
-    reference['cur_states'] = np.array(reference['cur_states'])
+    # So far, all states in 'reference' have been recorded in a matrix with dim0=drone, dim1=time, dim2=state
+    # However, our usual format is dim1=state, dim2=time
+    # That's why we need transposition here.
+    reference['cur_states'] = np.transpose(np.array(reference['cur_states']), axes=(0,2,1))
     reference['targets'] = np.transpose(np.array(reference['targets']), axes=(0,2,1))
     reference['orig_targets'] = np.transpose(np.array(reference['orig_targets']), axes=(0,2,1))
+    ### Save the states and the reference trajectory
+    np.save(traj_filename+"_reference.npy", reference, allow_pickle=True)
+
     #### Plot the simulation results ###########################
     if ARGS.plot:
         #logger.plot()
         utils.plot_states_and_targets(logger, reference)
-
-    ### Save the states and the reference trajectory
-    np.save(os.path.join(logger.OUTPUT_FOLDER, traj_filename+"_reference.npy"), reference, allow_pickle=True)
 
 if __name__ == "__main__":
 

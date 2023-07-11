@@ -3,7 +3,7 @@ import numpy as np
 def get_settings():
     name = 'simulation'
     suffix = 'paper'
-    seed = 550
+    seed = 44
     train_trajectory_path = 'traj_train_'
     eps = 1e-8
     controllability_tol = 1e-3
@@ -19,17 +19,26 @@ def get_settings():
     # algorithm = 'robust_hinf_scenario_slemma'
     check_slater = False
     check_willems = False
-    algorithm = 'robust_stabilization_scenario_slemma'
+    # algorithm = 'robust_stabilization_scenario_slemma'
+    algorithm = 'robust_lqr_scenario_slemma'
     output_verbosity = 0
 
-    # Extra weight distribution
-    mass_range = [0, 0.006]
-    pos_size = 0.01
+    ## Extra load distribution
+    # extra_loads = list() # leave empty ("list()") if you want to pick them randomly
+    extra_loads = [
+        {'mass': 0.001 ,'position':np.array([ 0.003,  0.002, -0.001]), 'form':'ball', 'size':[0.0]},
+        {'mass': 0.0013,'position':np.array([-0.002,  0.001,  0.001]), 'form':'ball', 'size':[0.0]},
+        {'mass': 0.0013,'position':np.array([ 0.000, -0.004,  0.002]), 'form':'ball', 'size':[0.0]},
+        {'mass': 0.0007,'position':np.array([ 0.006, -0.001,  0.000]), 'form':'ball', 'size':[0.0]},
+        {'mass': 0.0018,'position':np.array([-0.001, -0.001, -0.001]), 'form':'ball', 'size':[0.0]},
+    ]
+    # mass_range = [0, 0.003]
+    # pos_size = 0.01
     # displacement_planar = 0.01
     # displacement_vert = 0.0
 
-    N_synth = 15
-    N_test = 100
+    N_synth = 5
+    N_test = 5
     start = 0                              # time step to start sampling the trajectory with
     T = 300                                  # number of samples per trajectory for controller synthesis
     T_test = 60                            # number of samples per trajectory for performance evaluation
@@ -42,7 +51,7 @@ def get_settings():
     # performance metric
     Q = np.eye(n, n)
     S = np.zeros((n, m))
-    R = np.eye(m, m)
+    R = np.eye(m, m)*0.01
     C = np.array([[1,1,1,1,1,1]])
     D = np.array([[1, 1]])
 
@@ -60,8 +69,8 @@ def get_settings():
         'cut_traj':True,
         'init_rpys_spread':0.2,
         # 'init_xyzs_spread':0.01,
-        'gui':False,
-        'pid_type':'emulator'
+        'gui':True,
+        'pid_type':'mellinger'
     }
     testSettings = {
         'num_drones':N_test,
@@ -70,15 +79,15 @@ def get_settings():
         'num_samples':T_test,
         'ctrl_noise':0.0,
         'proc_noise':0.001,
-        'traj':'line',
+        'traj':'8',
         'part_pid_off':True,
         'traj_filename':None,
         'plot':False,
         'cut_traj':False,
         'wrap_wp':False,
-        'wind_on':True,
-        'gui':False,
-        'pid_type':'emulator'
+        'wind_on':False,
+        'gui':True,
+        'pid_type':'mellinger'
     }
 
     return locals()

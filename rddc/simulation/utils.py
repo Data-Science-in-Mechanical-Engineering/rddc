@@ -84,7 +84,7 @@ def update_urdf_mass_and_inertia(URDFPATH, NEW_URDFPATH, extra_load):
     mass += extra_load['mass']
     mass_element.set('value', str(mass))
 
-    dJ = J_as_dict(J_from_extra_mass(extra_load['mass'], extra_load['position'], extra_load['form'], extra_load['size']))
+    dJ = J_as_dict(extra_load['J'])
     for axis in ['ixx', 'ixy', 'ixz', 'iyy', 'iyz', 'izz']:
         inertia_value = float(inertia_element.get(axis))
         inertia_value += dJ[axis]
@@ -113,7 +113,7 @@ def get_load_sample_normal(rnd, mean, variance, form='ball', size=[0.0]):
     @output extra_load: dictionary with the sampled parameters, ready to be used in settings
     """
     sample = multivariate_normal(mean, variance, seed=rnd)
-    return {'mass':sample[0], 'position':[sample[1], sample[2], sample[3]], 'form':form, 'size':size}
+    return {'mass':sample[0], 'position':np.array([sample[1], sample[2], sample[3]]), 'form':form, 'size':size}
 
 def get_load_sample_box(rnd, mass_range, pos_size, form='ball', size=[0.0]):
     """
@@ -146,7 +146,7 @@ def get_load_sample_realistic(rnd, mass_range, displacement_planar=0.04, displac
     @param size: size of the extra load
     """
     mass = mass_range[0] + rnd.random()*(mass_range[1] - mass_range[0])
-    pos = [0, 0, 0]
+    pos = np.array([0, 0, 0])
     pos[0] = (2*rnd.random()-1) * displacement_planar
     if rnd.random()>0.5:
         pos[1] = pos[0]

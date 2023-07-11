@@ -15,43 +15,58 @@ import argparse
 from rddc.simulation import fly
 import matplotlib.pyplot as plt
 import seaborn as sns
+from rddc.tools.files import get_simulation_trajectory_path
 
-def get_test_trajectory_filename(settings, seed=None):
-    if seed is None:
-        seed = settings['seed']
-    return 'test_' + settings['testSettings']['traj'] +'_' + settings['testSettings']['sfb']  + '_seed' + str(seed)
+# def get_test_trajectory_filename(settings, seed=None):
+#     if seed is None:
+#         seed = settings['seed']
+#     return 'test_' + settings['testSettings']['traj'] +'_' + settings['testSettings']['sfb']  + '_seed' + str(seed)
 
-def get_train_trajectory_filename(settings):
-    return 'train_' + settings['trainSettings']['traj'] + '_seed' + str(settings['seed'])
+# def get_train_trajectory_filename(settings):
+#     return 'train_' + settings['trainSettings']['traj'] + '_seed' + str(settings['seed'])
 
 def get_trajectories(settings, paths):
+    """
+    this trajectory is in format suitable for training the controller:
+    each state is not an absolute value, but a deviation from the target state
+    """
     trajectories = list()
     state_idx = settings['state_idx']
     input_idx = settings['input_idx']
     for path in paths:
         trajectories_origin = np.load(path, allow_pickle=True)
-        trajectory = {
-            'U0': trajectories_origin[0]['U0'][input_idx, :],
-            'X0': trajectories_origin[0]['X0'][state_idx, :],
-            'X1': trajectories_origin[0]['X1'][state_idx, :],
-            'assumedBound':settings['assumedBound']
-        }
-        trajectories.append(trajectory)
+        for single_trajectory in trajectories_origin:
+            trajectory = {
+                'U0': single_trajectory['U0'][input_idx, :],
+                'X0': single_trajectory['X0'][state_idx, :],
+                'X1': single_trajectory['X1'][state_idx, :],
+                'assumedBound':settings['assumedBound']
+            }
+            trajectories.append(trajectory)
 
     return trajectories
 
 def get_reference(settings, path):
+    """
+    this is a target trajectory given to a quadcopter, (in an absolute format)
+    """
     state_idx = settings['state_idx']
     reference = np.load(path, allow_pickle=True).item()['orig_targets'][0, state_idx, :]
     return reference
 
 def get_absolute_trajectories(settings, paths):
+    """
+    this trajectory is in absolute format. (see get_trajectories())
+    """
     trajectories = list()
     state_idx = settings['state_idx']
     for path in paths:
-        trajectory = np.load(path, allow_pickle=True).item()['cur_states'][0, :, state_idx]
-        trajectories.append(trajectory)
-
+        trajectories_all = np.load(path, allow_pickle=True).item()['cur_states']
+        # print(trajectories_all)
+        # print(trajectories_all.shape[0])
+        for trajectory_drone in trajectories_all:
+            trajectory = trajectory_drone[state_idx, :]
+            trajectories.append(trajectory)
     return trajectories
 
 def check_trajectories(settings, trajectories, test_type='willems'):
@@ -126,9 +141,10 @@ def synthesize_controller(settings, trajectories4synth):
     return K
 
 def plotTrajectories(settings):
-    seeds = [settings['seed']+i+settings['N_synth'] for i in range(settings['N_test'])]
-    paths = [os.path.join('data', settings['name'], settings['suffix'], get_test_trajectory_filename(settings, seed) +'_reference.npy')
-                for seed in seeds]
+    # seeds = [settings['seed']+i+settings['N_synth'] for i in range(settings['N_test'])]
+    # paths = [os.path.join('data', settings['name'], settings['suffix'], get_test_trajectory_filename(settings, seed) +'_reference.npy')
+                # for seed in seeds]
+    paths = [get_simulation_trajectory_path(settings, 'test', reference=True)+'.npy']
     trajectories4test = get_absolute_trajectories(settings, paths)
     reference = get_reference(settings, paths[0])
     colors = sns.color_palette("deep", len(trajectories4test))
@@ -141,21 +157,50 @@ def plotTrajectories(settings):
     plt.plot(ref_x,ref_y,'-k')
     plt.show()
 
-def run_modular(settings_base):
+def training_parallel(settings_base):
+    settings = settings_base.copy()
+    if len(settings['extra_loads'])>0:
+        settings['N_synth'] = len(settings['extra_loads'])
+        sample_loads = False
+    else:
+        sample_loads = True
+    settings['trainSettings']['num_drones'] = settings['N_synth']
+    settings['trainSettings']['traj_filename'] = get_simulation_trajectory_path(settings, 'train')
+    rnd = np.random.default_rng(settings['seed'])
+    for sysId in range(settings['N_synth']):
+        if sample_loads:
+            extra_load = utils.get_load_sample_box(
+                rnd         = rnd,
+                mass_range  = settings['mass_range'],
+                pos_size    = settings['pos_size'],
+            )
+        else:
+            extra_load = settings['extra_loads'][sysId]
+        print(f"Using the following extra load:\n {extra_load}")
+        J = utils.J_from_extra_mass(extra_load['mass'], extra_load['position'], extra_load['form'], extra_load['size'])
+        print(f"J calculated:\n {np.array_str(J, precision=6)}")
+        extra_load.update({'J':J})
+        if not sample_loads:
+            settings['extra_loads'].append(extra_load)
+    fly.run(settings, settings['trainSettings'])
 
-    if ARGS.train:
-        # droneUrdfPath = os.path.join('gym-pybullet-drones', 'gym_pybullet_drones', 'assets')
-        # originalPath = os.path.join(droneUrdfPath, 'cf2x.urdf')
-        # backupPath = os.path.join(droneUrdfPath, 'cf2x_backup.urdf')
-        # os.replace(originalPath, backupPath) #backup
+def training_serial(settings_base):
+    droneUrdfPath = os.path.join('gym-pybullet-drones', 'gym_pybullet_drones', 'assets')
+    originalPath = os.path.join(droneUrdfPath, 'cf2x.urdf')
+    backupPath = os.path.join(droneUrdfPath, 'cf2x_backup.urdf')
+    os.replace(originalPath, backupPath) #backup
+    if len(settings_base['extra_loads'])>0:
+        sample_loads = False
+    else:
+        sample_loads = True
+    for sysId in range(settings_base['N_synth']):
         settings = settings_base.copy()
+        settings['seed'] += sysId
+        settings['trainSettings']['traj_filename'] = get_simulation_trajectory_path(settings, 'train', seed=settings['seed'])
+        settings['trainSettings']['num_drones'] = 1
         rnd = np.random.default_rng(settings['seed'])
-        settings.update({'extra_loads':list()})
-        for sysId in range(settings_base['N_synth']):
-            # settings['seed'] += sysId
-            # settings['trainSettings']['traj_filename'] = get_train_trajectory_filename(settings)
-            # extraLoad = settings['trainWeights'][sysId]
-            # extraLoad = utils.get_load_sample_realistic(
+        if sample_loads:
+            # extra_load = utils.get_load_sample_realistic(
             #     rnd,
             #     mass_range = settings['mass_range'],
             #     displacement_planar = settings['displacement_planar'],
@@ -166,19 +211,31 @@ def run_modular(settings_base):
                 mass_range  = settings['mass_range'],
                 pos_size    = settings['pos_size'],
             )
-            print(f"Using the following extra load:\n {extra_load}")
-            J = utils.J_from_extra_mass(extra_load['mass'], extra_load['position'], extra_load['form'], extra_load['size'])
-            print(f"J calculated:\n {np.array_str(J, precision=6)}")
-            extra_load.update({'J':J})
-            settings['extra_loads'].append(extra_load)
+        else:
+            extra_load = settings['extra_loads'][sysId]
+        print(f"Using the following extra load:\n {extra_load}")
+        J = utils.J_from_extra_mass(extra_load['mass'], extra_load['position'], extra_load['form'], extra_load['size'])
+        print(f"J calculated:\n {np.array_str(J, precision=6)}")
+        extra_load.update({'J':J})
+        utils.update_urdf_mass_and_inertia(backupPath, originalPath, extra_load)
         fly.run(settings, settings['trainSettings'])
-        # os.replace(backupPath, originalPath) #restore
+    os.replace(backupPath, originalPath) #restore
+
+def run_modular(settings_base):
+
+    if ARGS.train:
+        if settings_base['use_urdf']:
+            training_serial(settings_base)
+        else:
+            training_parallel(settings_base)
 
     if ARGS.K:
         settings = settings_base.copy()
-        seeds = [settings['seed']+i for i in range(settings['N_synth'])]
-        paths = [os.path.join('data', settings['name'], settings['suffix'], 'train_' + settings['trainSettings']['traj'] + '_seed' + str(seed) + '.npy')
-                    for seed in seeds]
+        if settings_base['use_urdf']:
+            seeds = [settings['seed']+i for i in range(settings['N_synth'])]
+            paths = [get_simulation_trajectory_path(settings, 'train', seed=seed)+'.npy' for seed in seeds]
+        else:
+            paths = [get_simulation_trajectory_path(settings, 'train')+'.npy']
         trajectories4synth = get_trajectories(settings, paths)
         # check_trajectories(settings, trajectories4synth, test_type='willems')
         K = synthesize_controller(settings, trajectories4synth=trajectories4synth)
@@ -230,8 +287,10 @@ if __name__=='__main__':
     parser.add_argument('--K',          action='store_true',       default=False,     help='Run controller synthesis')
     parser.add_argument('--test',       type=str,                  default=None,      help='Run test flight simulations and save their trajectories')
     parser.add_argument('--eval',       type=str,                  default=None,      help='Plot the test flight trajectory')
+    parser.add_argument('--use_urdf',   action='store_true',       default=False,     help='Whether to change quadcopter through the urdf file or through direct adjustments in simulation')
     ARGS = parser.parse_args()
 
     settings = get_settings()
+    settings.update({'use_urdf':ARGS.use_urdf})
     # settings['suffix'] = ''
     run_modular(settings)
