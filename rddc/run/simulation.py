@@ -180,7 +180,7 @@ def training_parallel(settings_base):
         J = utils.J_from_extra_mass(extra_load['mass'], extra_load['position'], extra_load['form'], extra_load['size'])
         print(f"J calculated:\n {np.array_str(J, precision=6)}")
         extra_load.update({'J':J})
-        if not sample_loads:
+        if sample_loads:
             settings['extra_loads'].append(extra_load)
     fly.run(settings, settings['trainSettings'])
 
@@ -218,8 +218,9 @@ def training_serial(settings_base):
         print(f"J calculated:\n {np.array_str(J, precision=6)}")
         extra_load.update({'J':J})
         utils.update_urdf_mass_and_inertia(backupPath, originalPath, extra_load)
+        settings.update({'urdfBackupPath':backupPath, 'urdfOriginalPath':originalPath})
         fly.run(settings, settings['trainSettings'])
-    os.replace(backupPath, originalPath) #restore
+    # os.replace(backupPath, originalPath) #restore (commented out, since it's done in fly.py)
 
 def run_modular(settings_base):
 

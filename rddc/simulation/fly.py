@@ -322,6 +322,8 @@ def run(settings, override_args=None):
                             obstacles=ARGS.obstacles,
                             user_debug_gui=ARGS.user_debug_gui
                             )
+    if settings['use_urdf']:
+        os.replace(settings['urdfBackupPath'], settings['urdfOriginalPath']) #restore the urdf now, so that the controller doesn't notice it
     if not ARGS.draw_trajectory:
         for j in range(ARGS.num_drones):
             # have to overwrite since for some reason pybullet calculates non-zero yaw in
