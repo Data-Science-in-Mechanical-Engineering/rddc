@@ -36,7 +36,7 @@ def get_settings():
     # ]
     extra_loads_test = list() # leave empty ("list()") if you want to pick them randomly
     mass_range = [0, 0.005]
-    pos_size = 0.03
+    pos_size = 0.01
     # displacement_planar = 0.01
     # displacement_vert = 0.0
 
@@ -49,7 +49,7 @@ def get_settings():
     # noise
     m_w = n                 # number of disturbance variables w_k
     B_w = np.eye(n, m_w)
-    assumedBound = 0.002     # noise bound assumed for robust controller synthesis
+    assumedBound = 0.0004     # noise bound assumed for robust controller synthesis
 
     # performance metric
     Q = np.eye(n, n)*1
@@ -61,10 +61,10 @@ def get_settings():
     trainSettings = {
         'num_drones':N_synth,
         'sfb':None,
-        'sfb_freq_hz':5,
+        'sfb_freq_hz':20,
         'num_samples':T,
         'ctrl_noise':1.0,
-        'proc_noise':0.001,
+        'proc_noise':0.0002,
         'traj':'hover',
         'part_pid_off':True,
         'traj_filename':None,
@@ -78,10 +78,10 @@ def get_settings():
     testSettings = {
         'num_drones':N_test,
         'sfb':'direct',
-        'sfb_freq_hz':5,
+        'sfb_freq_hz':20,
         'num_samples':T_test,
         'ctrl_noise':0.0,
-        'proc_noise':0.001,
+        'proc_noise':0.0002,
         'traj':'line',
         'part_pid_off':True,
         'traj_filename':None,
