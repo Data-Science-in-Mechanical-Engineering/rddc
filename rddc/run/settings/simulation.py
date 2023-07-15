@@ -36,20 +36,20 @@ def get_settings():
     # ]
     extra_loads_test = list() # leave empty ("list()") if you want to pick them randomly
     mass_range = [0, 0.005]
-    pos_size = 0.02
+    pos_size = 0.015
     # displacement_planar = 0.01
     # displacement_vert = 0.0
 
-    N_synth = 5
-    N_test = 10
+    N_synth = 15
+    N_test = 50
     start = 0                              # time step to start sampling the trajectory with
-    T = 50                                  # number of samples per trajectory for controller synthesis
-    T_test = 240                            # number of samples per trajectory for performance evaluation
+    T = 300                                  # number of samples per trajectory for controller synthesis
+    T_test = 120                            # number of samples per trajectory for performance evaluation
 
     # noise
     m_w = n                 # number of disturbance variables w_k
     B_w = np.eye(n, m_w)
-    assumedBound = 0.00004     # noise bound assumed for robust controller synthesis
+    assumedBound = 0.0002     # noise bound assumed for robust controller synthesis
 
     # performance metric
     Q = np.eye(n, n)*1
@@ -64,7 +64,7 @@ def get_settings():
         'sfb_freq_hz':50,
         'num_samples':T,
         'ctrl_noise':1.0,
-        'proc_noise':0.00002,
+        'proc_noise':0.0001,
         'traj':'hover',
         'part_pid_off':True,
         'traj_filename':None,
@@ -81,8 +81,8 @@ def get_settings():
         'sfb_freq_hz':50,
         'num_samples':T_test,
         'ctrl_noise':0.0,
-        'proc_noise':0.00002,
-        'traj':'line',
+        'proc_noise':0.0001,
+        'traj':'8',
         'part_pid_off':True,
         'traj_filename':None,
         'plot':False,
