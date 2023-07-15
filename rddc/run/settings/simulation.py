@@ -78,10 +78,10 @@ def get_settings():
     testSettings = {
         'num_drones':N_test,
         'sfb':'direct',
-        'sfb_freq_hz':20,
+        'sfb_freq_hz':10,
         'num_samples':T_test,
         'ctrl_noise':0.0,
-        'proc_noise':0.001,
+        'proc_noise':0.0005,
         'traj':'line',
         'part_pid_off':True,
         'traj_filename':None,
