@@ -158,9 +158,15 @@ def plotTrajectories(settings):
     plt.show()
 
 def training_parallel(settings_base):
+    """
+    do not change urdf
+    either take load samples from extra_loads_synth or sample it from the given distribution
+    calculate the moment of inertia for each extra load
+    save the extra loads in settings, so they can be accessed in the simulation
+    """
     settings = settings_base.copy()
-    if len(settings['extra_loads'])>0:
-        settings['N_synth'] = len(settings['extra_loads'])
+    if len(settings['extra_loads_synth'])>0:
+        settings['N_synth'] = len(settings['extra_loads_synth'])
         sample_loads = False
     else:
         sample_loads = True
@@ -175,16 +181,20 @@ def training_parallel(settings_base):
                 pos_size    = settings['pos_size'],
             )
         else:
-            extra_load = settings['extra_loads'][sysId]
+            extra_load = settings['extra_loads_synth'][sysId]
         print(f"Using the following extra load:\n {extra_load}")
         J = utils.J_from_extra_mass(extra_load['mass'], extra_load['position'], extra_load['form'], extra_load['size'])
         print(f"J calculated:\n {np.array_str(J, precision=6)}")
         extra_load.update({'J':J})
-        if sample_loads:
-            settings['extra_loads'].append(extra_load)
+        settings['extra_loads'].append(extra_load)
     fly.run(settings, settings['trainSettings'])
 
 def training_serial(settings_base):
+    """
+    either take load samples from extra_loads_synth or sample it from the given distribution
+    calculate the moment of inertia for each extra load
+    apply each of the extra loads to the urdf file, so it can be accessed in the simulation
+    """
     droneUrdfPath = os.path.join('gym-pybullet-drones', 'gym_pybullet_drones', 'assets')
     originalPath = os.path.join(droneUrdfPath, 'cf2x.urdf')
     backupPath = os.path.join(droneUrdfPath, 'cf2x_backup.urdf')
@@ -222,6 +232,81 @@ def training_serial(settings_base):
         fly.run(settings, settings['trainSettings'])
     # os.replace(backupPath, originalPath) #restore (commented out, since it's done in fly.py)
 
+def testing_parallel(settings_base):
+    """
+    do not change urdf
+    either take load samples from extra_loads_test or sample it from the given distribution
+    calculate the moment of inertia for each extra load
+    save the extra loads in settings, so they can be accessed in the simulation
+    """
+    settings = settings_base.copy()
+    if len(settings['extra_loads_test'])>0:
+        settings['N_test'] = len(settings['extra_loads_test'])
+        sample_loads = False
+    else:
+        sample_loads = True
+    settings['testSettings']['num_drones'] = settings['N_test']
+    settings['testSettings']['traj_filename'] = get_simulation_trajectory_path(settings, 'test')
+    rnd = np.random.default_rng(settings['seed'])
+    for sysId in range(settings['N_test']):
+        if sample_loads:
+            extra_load = utils.get_load_sample_box(
+                rnd         = rnd,
+                mass_range  = settings['mass_range'],
+                pos_size    = settings['pos_size'],
+            )
+        else:
+            extra_load = settings['extra_loads_test'][sysId]
+        print(f"Using the following extra load:\n {extra_load}")
+        J = utils.J_from_extra_mass(extra_load['mass'], extra_load['position'], extra_load['form'], extra_load['size'])
+        print(f"J calculated:\n {np.array_str(J, precision=6)}")
+        extra_load.update({'J':J})
+        settings['extra_loads'].append(extra_load)
+    fly.run(settings, settings['testSettings'])
+
+def testing_serial(settings_base):
+    """
+    either take load samples from extra_loads_test or sample it from the given distribution
+    calculate the moment of inertia for each extra load
+    apply each of the extra loads to the urdf file, so it can be accessed in the simulation
+    """
+    droneUrdfPath = os.path.join('gym-pybullet-drones', 'gym_pybullet_drones', 'assets')
+    originalPath = os.path.join(droneUrdfPath, 'cf2x.urdf')
+    backupPath = os.path.join(droneUrdfPath, 'cf2x_backup.urdf')
+    if len(settings_base['extra_loads_test'])>0:
+        sample_loads = False
+    else:
+        sample_loads = True
+    for sysId in range(settings_base['N_test']):
+        os.replace(originalPath, backupPath) #backup
+        settings = settings_base.copy()
+        settings['seed'] += sysId
+        settings['testSettings']['traj_filename'] = get_simulation_trajectory_path(settings, 'test', seed=settings['seed'])
+        settings['testSettings']['num_drones'] = 1
+        rnd = np.random.default_rng(settings['seed'])
+        if sample_loads:
+            # extra_load = utils.get_load_sample_realistic(
+            #     rnd,
+            #     mass_range = settings['mass_range'],
+            #     displacement_planar = settings['displacement_planar'],
+            #     displacement_vert = settings['displacement_vert']
+            # )
+            extra_load = utils.get_load_sample_box(
+                rnd         = rnd,
+                mass_range  = settings['mass_range'],
+                pos_size    = settings['pos_size'],
+            )
+        else:
+            extra_load = settings['extra_loads_test'][sysId]
+        print(f"Using the following extra load:\n {extra_load}")
+        J = utils.J_from_extra_mass(extra_load['mass'], extra_load['position'], extra_load['form'], extra_load['size'])
+        print(f"J calculated:\n {np.array_str(J, precision=6)}")
+        extra_load.update({'J':J})
+        utils.update_urdf_mass_and_inertia(backupPath, originalPath, extra_load)
+        settings.update({'urdfBackupPath':backupPath, 'urdfOriginalPath':originalPath})
+        fly.run(settings, settings['testSettings'])
+    # os.replace(backupPath, originalPath) #restore (commented out, since it's done in fly.py)
+
 def run_modular(settings_base):
 
     if ARGS.train:
@@ -243,36 +328,39 @@ def run_modular(settings_base):
         # print('\nDDC controller: \n{}\n'.format(K))
 
     if ARGS.test:
-        # droneUrdfPath = os.path.join('gym-pybullet-drones', 'gym_pybullet_drones', 'assets')
-        # originalPath = os.path.join(droneUrdfPath, 'cf2x.urdf')
-        # backupPath = os.path.join(droneUrdfPath, 'cf2x_backup.urdf')
-        # os.replace(originalPath, backupPath) #backup
-        settings = settings_base.copy()
-        rnd = np.random.default_rng(settings['seed'])
-        settings.update({'extra_loads':list()})
-        settings['testSettings']['sfb'] = ARGS.test
-        for sysId in range(settings_base['N_test']):
-            # settings['seed'] += sysId + settings['N_synth']
-            # settings['testSettings']['traj_filename'] = get_test_trajectory_filename(settings)
-            # extraLoad = settings['testWeights'][sysId]
-            # extraLoad = utils.get_load_sample_realistic(
-            #     rnd,
-            #     mass_range = settings['mass_range'],
-            #     displacement_planar = settings['displacement_planar'],
-            #     displacement_vert = settings['displacement_vert']
-            # )
-            extra_load = utils.get_load_sample_box(
-                rnd         = rnd,
-                mass_range  = settings['mass_range'],
-                pos_size    = settings['pos_size'],
-            )
-            print(f"Using the following extra load:\n {extra_load}")
-            J = utils.J_from_extra_mass(extra_load['mass'], extra_load['position'], extra_load['form'], extra_load['size'])
-            print(f"J calculated:\n {np.array_str(J, precision=6)}")
-            extra_load.update({'J':J})
-            settings['extra_loads'].append(extra_load)
-        fly.run(settings, settings['testSettings'])
-        # os.replace(backupPath, originalPath) #restore
+        if settings_base['use_urdf']:
+            testing_serial(settings_base)
+        else:
+            testing_parallel(settings_base)
+        # # droneUrdfPath = os.path.join('gym-pybullet-drones', 'gym_pybullet_drones', 'assets')
+        # # originalPath = os.path.join(droneUrdfPath, 'cf2x.urdf')
+        # # backupPath = os.path.join(droneUrdfPath, 'cf2x_backup.urdf')
+        # # os.replace(originalPath, backupPath) #backup
+        # settings = settings_base.copy()
+        # rnd = np.random.default_rng(settings['seed'])
+        # settings.update({'extra_loads':list()})
+        # for sysId in range(settings_base['N_test']):
+        #     # settings['seed'] += sysId + settings['N_synth']
+        #     # settings['testSettings']['traj_filename'] = get_test_trajectory_filename(settings)
+        #     # extraLoad = settings['testWeights'][sysId]
+        #     # extraLoad = utils.get_load_sample_realistic(
+        #     #     rnd,
+        #     #     mass_range = settings['mass_range'],
+        #     #     displacement_planar = settings['displacement_planar'],
+        #     #     displacement_vert = settings['displacement_vert']
+        #     # )
+        #     extra_load = utils.get_load_sample_box(
+        #         rnd         = rnd,
+        #         mass_range  = settings['mass_range'],
+        #         pos_size    = settings['pos_size'],
+        #     )
+        #     print(f"Using the following extra load:\n {extra_load}")
+        #     J = utils.J_from_extra_mass(extra_load['mass'], extra_load['position'], extra_load['form'], extra_load['size'])
+        #     print(f"J calculated:\n {np.array_str(J, precision=6)}")
+        #     extra_load.update({'J':J})
+        #     settings['extra_loads'].append(extra_load)
+        # fly.run(settings, settings['testSettings'])
+        # # os.replace(backupPath, originalPath) #restore
 
     if ARGS.eval:
         settings = settings_base.copy()
@@ -293,5 +381,6 @@ if __name__=='__main__':
 
     settings = get_settings()
     settings.update({'use_urdf':ARGS.use_urdf})
-    # settings['suffix'] = ''
+    if ARGS.test is not None:
+        settings['testSettings']['sfb'] = ARGS.test
     run_modular(settings)
