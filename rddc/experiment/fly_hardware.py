@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import numpy as np
 from datetime import datetime
 import threading
+import shutil
 # from crazyswarm.ros_ws.src.crazyswarm.scripts.pycrazyswarm import *
 # from simulation.controller import SimpleStateFeedbackController
 # from rddc.run.settings.experiment import get_settings
@@ -15,9 +17,11 @@ import threading
 # sys.path.insert(0, ".")
 from pycrazyswarm import *
 from dmitrii_drones.controller import SimpleStateFeedbackController
-from dmitrii_drones.settings import get_settings
+# from dmitrii_drones.settings import get_settings
 from dmitrii_drones.trajectory import *
 from dmitrii_drones.cf_loggers import bufferStateLogger, viconStateLogger
+import importlib
+import argparse
 
 statenames = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'roll', 'pitch', 'yaw', 'roll rate', 'pitch rate', 'yaw rate']
 
@@ -29,7 +33,7 @@ def init_controller(settings):
     input_idx = settings['input_idx']
     K = np.zeros((12,12))
     path = os.path.join('dmitrii_drones', 'controllers')
-    controller = np.load(os.path.join(path, 'controller.npy'), allow_pickle=True).item()
+    controller = np.load(os.path.join(path, settings['sfb_name']+'.npy'), allow_pickle=True).item()
     for row, r_idx in enumerate(input_idx):
         for col, c_idx in enumerate(state_idx):
             K[r_idx, c_idx] = controller['controller'][row, col]
@@ -94,15 +98,18 @@ def manual_stabilize(allcfs, time_helper, logger, last_pos, duration = 1):
     only works for one crazyflie
     """
     for cf in allcfs.crazyflies:
-        rate = 10
+        rate = 20
         N = int(duration*rate)
-        print(f"recovering from {last_pos}")
+        state = logger.retrieve_state()
+        dt = logger.retrieve_timestep()
+        # pos = state[0:3]
+        pos = last_pos
+        vel = state[3:6]
+        print(f"recovering from {last_pos}, {pos} @ {vel}")
+        vel[2] = 0
         for i in range(N):
-            state = logger.retrieve_state()
-            dt = logger.retrieve_timestep()
-            vel = state[3:6]*(1-(i+1)/N)
-            vel[2] = 0
-            pos = state[0:3] + vel*dt
+            pos = [0., 0., 1.,]
+            vel = vel*(1-(i+1)/N)
             cf.cmdFullState(
                 pos     = pos,
                 vel     = vel,
@@ -110,7 +117,7 @@ def manual_stabilize(allcfs, time_helper, logger, last_pos, duration = 1):
                 yaw     = 0.,
                 omega   = [0., 0., 0.,],
             )
-            print(".")
+            print(f". : going to: {pos} @ {vel}")
             time_helper.sleepForRate(rate)
 
 def interp_trajectory(trajectory, period, time_target):
@@ -159,45 +166,103 @@ def print_states(ist, soll, error, ctrl):
         print((statenames[idx]+', ').ljust(13, ' '),units[idx].ljust(3, ' ') + ' | ' + ist_str[idx] + ' | ' + soll_str[idx] + ' | ' + error_str[idx] + ' | ' + ctrl_str[idx])
 
 def enable_pid(settings, cf):
-    cf.setParam("ctrlMel/kp_xy", settings['kp_xy'])
-    cf.setParam("ctrlMel/ki_xy", settings['ki_xy'])
-    cf.setParam("ctrlMel/kd_xy", settings['kd_xy'])
-    cf.setParam("ctrlMel/kp_z", settings['kp_z'])
-    cf.setParam("ctrlMel/ki_z", settings['ki_z'])
-    cf.setParam("ctrlMel/kd_z", settings['kd_z'])
+    try:
+        cf.setParam("ctrlMel/kp_xy", settings['kp_xy'])
+        cf.setParam("ctrlMel/ki_xy", settings['ki_xy'])
+        cf.setParam("ctrlMel/kd_xy", settings['kd_xy'])
+        cf.setParam("ctrlMel/kp_z", settings['kp_z'])
+        cf.setParam("ctrlMel/ki_z", settings['ki_z'])
+        cf.setParam("ctrlMel/kd_z", settings['kd_z'])
 
-    cf.setParam("ctrlMel/kR_xy", settings['kR_xy'])
-    cf.setParam("ctrlMel/kw_xy", settings['kw_xy'])
-    cf.setParam("ctrlMel/kd_omega_rp", settings['kd_omega_rp']) 
-    cf.setParam("ctrlMel/ki_m_xy", settings['ki_m_xy'])
-    cf.setParam("ctrlMel/kR_z", settings['kR_z'])
-    cf.setParam("ctrlMel/kw_z", settings['kw_z'])
-    cf.setParam("ctrlMel/ki_m_z", settings['ki_m_z'])
+        cf.setParam("ctrlMel/kR_xy", settings['kR_xy'])
+        cf.setParam("ctrlMel/kw_xy", settings['kw_xy'])
+        cf.setParam("ctrlMel/kd_omega_rp", settings['kd_omega_rp']) 
+        cf.setParam("ctrlMel/ki_m_xy", settings['ki_m_xy'])
+        cf.setParam("ctrlMel/kR_z", settings['kR_z'])
+        cf.setParam("ctrlMel/kw_z", settings['kw_z'])
+        cf.setParam("ctrlMel/ki_m_z", settings['ki_m_z'])
+    except Exception:
+        return False
+    return True
+
+def enable_slow_pid(settings, cf):
+    try:
+        cf.setParam("ctrlMel/kp_xy", settings['kp_xy']*0.3)
+        cf.setParam("ctrlMel/ki_xy", settings['ki_xy']*0.3)
+        cf.setParam("ctrlMel/kd_xy", settings['kd_xy']*0.3)
+        cf.setParam("ctrlMel/kp_z", settings['kp_z']*0.8)
+        cf.setParam("ctrlMel/ki_z", settings['ki_z']*0.2)
+        cf.setParam("ctrlMel/kd_z", settings['kd_z']*0.8)
+
+        cf.setParam("ctrlMel/kR_xy", settings['kR_xy'])
+        cf.setParam("ctrlMel/kw_xy", settings['kw_xy'])
+        cf.setParam("ctrlMel/kd_omega_rp", settings['kd_omega_rp']) 
+        cf.setParam("ctrlMel/ki_m_xy", settings['ki_m_xy'])
+        cf.setParam("ctrlMel/kR_z", settings['kR_z'])
+        cf.setParam("ctrlMel/kw_z", settings['kw_z'])
+        cf.setParam("ctrlMel/ki_m_z", settings['ki_m_z'])
+    except Exception:
+        return False
+    return True
+
+def enable_recovery_pid(settings, cf):
+    try:
+        cf.setParam("ctrlMel/kp_xy", settings['kp_xy']*0.0)
+        cf.setParam("ctrlMel/ki_xy", settings['ki_xy']*0.0)
+        cf.setParam("ctrlMel/kd_xy", settings['kd_xy']*0.0)
+        cf.setParam("ctrlMel/kp_z", settings['kp_z']*1)
+        cf.setParam("ctrlMel/ki_z", settings['ki_z']*1)
+        cf.setParam("ctrlMel/kd_z", settings['kd_z']*1)
+
+        cf.setParam("ctrlMel/kR_xy", settings['kR_xy']*0.7)
+        cf.setParam("ctrlMel/kw_xy", settings['kw_xy']*0.7)
+        cf.setParam("ctrlMel/kd_omega_rp", settings['kd_omega_rp']*0.7) 
+        cf.setParam("ctrlMel/ki_m_xy", settings['ki_m_xy']*1)
+        cf.setParam("ctrlMel/kR_z", settings['kR_z']*1)
+        cf.setParam("ctrlMel/kw_z", settings['kw_z']*1)
+        cf.setParam("ctrlMel/ki_m_z", settings['ki_m_z']*1)
+    except Exception:
+        return False
+    return True
 
 def partially_disable_pid(settings, cf):
-    cf.setParam("ctrlMel/kp_xy", 0.0)
-    cf.setParam("ctrlMel/ki_xy", 0.0)
-    cf.setParam("ctrlMel/kd_xy", 0.0)
-    cf.setParam("ctrlMel/kp_z", settings['kp_z'])
-    cf.setParam("ctrlMel/ki_z", settings['ki_z'])
-    cf.setParam("ctrlMel/kd_z", settings['kd_z'])
+    try:
+        cf.setParam("ctrlMel/kp_xy", 0.0)
+        cf.setParam("ctrlMel/ki_xy", 0.0)
+        cf.setParam("ctrlMel/kd_xy", 0.0)
+        cf.setParam("ctrlMel/kp_z", settings['kp_z'])
+        cf.setParam("ctrlMel/ki_z", settings['ki_z'])
+        cf.setParam("ctrlMel/kd_z", settings['kd_z'])
 
-    cf.setParam("ctrlMel/kR_xy", 0.0)
-    cf.setParam("ctrlMel/kw_xy", settings['kw_xy'])
-    cf.setParam("ctrlMel/kd_omega_rp", settings['kd_omega_rp']) 
-    cf.setParam("ctrlMel/ki_m_xy",settings['ki_m_xy'])
-    cf.setParam("ctrlMel/kR_z", settings['kR_z'])
-    cf.setParam("ctrlMel/kw_z", settings['kw_z'])
-    cf.setParam("ctrlMel/ki_m_z", settings['ki_m_z'])
+        cf.setParam("ctrlMel/kR_xy", 0.0)
+        cf.setParam("ctrlMel/kw_xy", settings['kw_xy'])
+        cf.setParam("ctrlMel/kd_omega_rp", settings['kd_omega_rp']) 
+        cf.setParam("ctrlMel/ki_m_xy",settings['ki_m_xy'])
+        cf.setParam("ctrlMel/kR_z", settings['kR_z'])
+        cf.setParam("ctrlMel/kw_z", settings['kw_z'])
+        cf.setParam("ctrlMel/ki_m_z", settings['ki_m_z'])
+    except Exception:
+        return False
+    return True
 
 if __name__ == "__main__":
 
+    parser = argparse.ArgumentParser(description="Module to run hardware experiments on craziflies")
+    parser.add_argument('--train',  action='store_true',    default=False)
+    parser.add_argument('--test',   action='store_true',    default=False)
+    ARGS = parser.parse_args()
+
+    if not ARGS.train:
+        assert ARGS.test
+        test_or_train = 'test'
+        settings_module = importlib.import_module('dmitrii_drones.settings_test')
+    else:
+        assert ARGS.train
+        test_or_train = 'train'
+        settings_module = importlib.import_module('dmitrii_drones.settings_train')
+
     #### Read the settings and create the path ###########
-    settings = get_settings()
-    
-    datapath = os.path.join('dmitrii_drones', 'data', settings['name'], settings['suffix'])
-    if not os.path.exists(datapath):
-        os.makedirs(datapath)
+    settings = settings_module.get_settings()
     
     #### Init swarm ######################################
     swarm           = Crazyswarm()
@@ -215,44 +280,53 @@ if __name__ == "__main__":
         # I_z=cf.getParam("ctrlMel/ki_z")
 
     #### Init controller #################################
-    rddc            = init_controller(settings)
+    if 'sfb_name' in settings.keys():
+        rddc            = init_controller(settings)
     rddc_rate       = settings['rddc_rate'] #Hz
     main_rate       = settings['main_rate'] #Hz
     main_per_rddc   = main_rate // rddc_rate
     assert main_rate % rddc_rate == 0
-    #General
-    # learn=True
-    # learn_counter=0
-    # max_learn_rounds=100
-    total_rounds = settings['total_rounds']
-    # continue_l=False
-    # chg_at=[0,8]
+    if 'total_laps' in settings.keys() and 'T' in settings.keys():
+        print("Only one of 'total+laps' and 'T' should be specified in settings")
+        raise ValueError
 
-    #### Init save files #################################
-    #TODO: create a file naming scheme like Anto
-    # if learn and (not trigger):
-    #     dir="/home/franka_panda/Holz_drones/SOmel_{}_beta_{}_{}chges_{}_{}_".format(experiment_type, beta_type, len(chg_at)-1, max_learn_rounds, total_rounds)+datetime.now().strftime("%m.%d_%H.%M")
-    # elif(trigger and learn):
-    #     dir="/home/franka_panda/Holz_drones/ETLmel_{}_beta_{}_{}chges_{}_{}_".format(experiment_type, beta_type, len(chg_at)-1, max_learn_rounds, total_rounds)+datetime.now().strftime("%m.%d_%H.%M")
-    # else:
-        # dir="/home/franka_panda/Holz_drones/Baseline_{}_{}chges_{}_{}_".format(experiment_type, len(chg_at)-1, max_learn_rounds, total_rounds)+datetime.now().strftime("%m.%d_%H.%M")
-    savepath = "/home/franka_panda/dmitrii_drones/noname_"+datetime.now().strftime("%m.%d_%H.%M")
+
+    codepath = os.getcwd()
+    # print(settings['weight_combination'])
+    testcase_name = settings['trajectory'] + '_' + settings['weight_combination'] + '_' + str(rddc_rate) + 'Hz_' + str(settings['ctrl_noise'])
+    savepath = os.path.join('/home','franka_panda','dmitrii_drones',testcase_name)
     trajectory_path = savepath+"/trajectory.npy"
+    script_path_src = os.path.join(codepath,__file__)
+    script_path_dst = os.path.join(savepath,__file__)
+    settings_path_src = os.path.join(codepath,'dmitrii_drones','settings_'+test_or_train+'.py')
+    settings_path_dst = os.path.join(savepath,'dmitrii_drones','settings_'+test_or_train+'.py')
+    loggers_code_path_src = os.path.join(codepath,'dmitrii_drones','cf_loggers.py')
+    loggers_code_path_dst = os.path.join(savepath,'dmitrii_drones','cf_loggers.py')
+    trajectory_code_path_src = os.path.join(codepath,'dmitrii_drones','trajectory.py')
+    trajectory_code_path_dst = os.path.join(savepath,'dmitrii_drones','trajectory.py')
+    controller_code_path_src = os.path.join(codepath,'dmitrii_drones','controller.py')
+    controller_code_path_dst = os.path.join(savepath,'dmitrii_drones','controller.py')
     if not(os.path.exists(savepath)):
         os.makedirs(savepath)
-    ctrl_trajectory = {'time':[],'U0':[], 'X0':[], 'X1':[]}
+    if not(os.path.exists(os.path.join(savepath,'dmitrii_drones'))):
+        os.makedirs(os.path.join(savepath,'dmitrii_drones'))
 
     #### Init soll trajectory ############################
     radius = 1.0
     height = 1.0
-    period = 10.0 # time (s) for one lap
+    period = 20.0 # time (s) for one lap
     trajectory_resolution   = 360
-    pos_traj, vel_traj = get_trajectory_gerono(height, radius, trajectory_resolution, period)
-    # pos_traj, vel_traj = get_trajectory_hover(height, trajectory_resolution)
+    if settings['trajectory'] in ['hover']:
+        pos_traj, vel_traj = get_trajectory_hover(height, trajectory_resolution)
+    elif settings['trajectory'] in ['8']:
+        pos_traj, vel_traj = get_trajectory_gerono(height, radius, trajectory_resolution, period)
+    else:
+        print("Wrong trajectory name")
+        raise ValueError
 
     #### Init state logging ##############################
     # logger = bufferStateLogger(buffer_size=2)
-    vicon_frequency = 300 #Hz
+    vicon_frequency = 200 #Hz
     vicon_buffer_size = 5
     filtering_latency = vicon_buffer_size/vicon_frequency/2
     print(f"Vicon system is assumed to publish @ {vicon_frequency}Hz")
@@ -261,11 +335,11 @@ if __name__ == "__main__":
     logger = viconStateLogger(vicon_buffer_size=vicon_buffer_size)
     threading.Thread(target=threaded_log_run, args=(logger,)).start()
 
-    # time_helper.sleep(vicon_buffer_size/vicon_frequency*2)    # make sure to collect enough data in the buffer
-    # pos_cf = cf.position()
-    # pos_vicon = logger.retrieve_state()[0:3]
-    # logger.vicon2cf_translation = pos_cf - pos_vicon
-    # print(f"Calculated translational shift between vicon's and cf's coordinate systems:\n\t {np.array_str(logger.vicon2cf_translation, precision=4)}")
+    time_helper.sleep(vicon_buffer_size/vicon_frequency*2)    # make sure to collect enough data in the buffer
+    pos_cf = cf.position()
+    pos_vicon = logger.retrieve_state()[0:3]
+    logger.vicon2cf_translation = pos_cf - pos_vicon
+    print(f"Calculated translational shift between vicon's and cf's coordinate systems:\n\t {np.array_str(logger.vicon2cf_translation, precision=4)}")
  
     #### Flight start ####################################
     print("taking off\n")
@@ -286,8 +360,12 @@ if __name__ == "__main__":
             cf.cmdPosition([0,0,height], 0,)           
         time_helper.sleep(.1)
 
+    ctrl_trajectory = {'time':[],'U0':[], 'X0':[], 'X1':[]}
+    lap_counter = 0
     #### Lemniscate trajectory ###################
-    for rounds in range(total_rounds):
+    # for rounds in range(total_laps):
+    keep_going = True
+    while keep_going:
 
         for i in range(1):
             for cf in allcfs.crazyflies:
@@ -311,6 +389,9 @@ if __name__ == "__main__":
             if len(unsafe_states)>0:
                 for cf in allcfs.crazyflies:
                     last_pos = cf.position()
+                    last_states = logger.retrieve_state()[0:3]
+                    print(f"last_pos:    {last_pos}")
+                    print(f"last_states: {last_states}")
                 lap_successful = False
                 print(f"\t\t\tAbout to crash!")
                 break
@@ -331,9 +412,11 @@ if __name__ == "__main__":
                     soll[0:3] = interp_trajectory(pos_traj, period, lap_time)
                     soll[3:6] = interp_trajectory(vel_traj*min(lap_time/5,1), period, lap_time)
                     error = ist - soll
-                    ctrl = np.zeros(12)
-                    ctrl = rddc.computeControl(error[0:3], error[3:6], error[6:9], error[9:12])
-                    # ctrl[settings['input_idx']] = ctrl[settings['input_idx']] + 0.2 * np.random.rand(len(settings['input_idx']))
+                    if 'sfb_name' in settings.keys():
+                        ctrl = rddc.computeControl(error[0:3], error[3:6], error[6:9], error[9:12])
+                    else:
+                        ctrl = np.zeros(12)
+                    ctrl[settings['input_idx']] = ctrl[settings['input_idx']] + settings['ctrl_noise'] * (2.0*np.random.rand(len(settings['input_idx']))-1.0)
                     # ctrl = ctrl/3
                     # ctrl[7] = -ctrl[7] #normal -> cf #unnecessary, since cmdFullState operates in normal coordinates
                     # ctrl[10] = -ctrl[10]
@@ -362,19 +445,38 @@ if __name__ == "__main__":
             time_helper.sleepForRate(main_rate)
             main_counter = main_counter + 1
         ctrl_trajectory['X1'].append(None)
-        enable_pid(settings, cf)
+        lap_counter = lap_counter + 1
         if not lap_successful:
-            print(f"\tUnsafe states: {unsafe_states}")
-            manual_stabilize(allcfs=allcfs, time_helper=time_helper, logger=logger, last_pos=last_pos)
+            communication_ok = True
+            print(f"\tUnsafe states: {[statenames[state_id] for state_id in unsafe_states]}")
+            for cf in allcfs.crazyflies:
+                communication_ok = enable_recovery_pid(settings, cf)
+            if not communication_ok:
+                break
+            manual_stabilize(allcfs=allcfs, time_helper=time_helper, logger=logger, last_pos=last_pos, duration=0.4)
+            for cf in allcfs.crazyflies:
+                communication_ok = enable_slow_pid(settings, cf)
+            if not communication_ok:
+                break
             print(f"\tGoing to origin:")
-            manual_goto(allcfs=allcfs, time_helper=time_helper, target=[0,0,height])
+            manual_goto(allcfs=allcfs, time_helper=time_helper, target=[0,0,height], vel=0.5, N_steps=10)
+
+        for cf in allcfs.crazyflies:
+            communication_ok = enable_pid(settings, cf)
+        if not communication_ok:
+            break
+
         for i in range(1):
             for cf in allcfs.crazyflies:
                 cf.cmdPosition([0,0,height], 0,)
+        if 'total_laps' in settings.keys():
+            keep_going = lap_counter < settings['total_laps']
+        else:
+            keep_going = len(ctrl_trajectory['X0']) < settings['T']+lap_counter
 
 
         #### Calculate performance ###########################
-        print(f"Lap {rounds+1}/{total_rounds} | finished: {lap_successful}")
+        print(f"Lap {lap_counter} | finished: {lap_successful} | #data points: {len(ctrl_trajectory['X0'])}")
 
         # TODO: Anto: why? Pause to learn?
         # TODO: Anto: Why command the same position 25 times? Don't they remember it?
@@ -385,9 +487,22 @@ if __name__ == "__main__":
                 cf.cmdPosition([0,0,height], 0,)
             time_helper.sleep(.1)
 
-        #### Save Trajectory ##################################
-        np.save(trajectory_path, ctrl_trajectory, allow_pickle=True)
+    #### Save Everything ##################################
+    print("Saving the data")
+    np.save(trajectory_path, ctrl_trajectory, allow_pickle=True)
+    shutil.copy(script_path_src, script_path_dst)
+    shutil.copy(settings_path_src, settings_path_dst)
+    shutil.copy(trajectory_code_path_src, trajectory_code_path_dst)
+    shutil.copy(controller_code_path_src, controller_code_path_dst)
+    print("Done")
 
-    manual_land(allcfs=allcfs, time_helper=time_helper, targetHeight=0.05, duration=2.0)
-    # allcfs.land(targetHeight=0.05, duration=2.0) #Alex said it doesn't work once cmdFullState has been issued
+    if communication_ok:
+        manual_land(allcfs=allcfs, time_helper=time_helper, targetHeight=0.05, duration=2.0)
+    # allcfs.land(targetHeight=0.05, duration=2.0) #it doesn't work once cmdFullState has been issued
+    del(swarm)
+
+    for i in range(len(ctrl_trajectory['X0'])):
+        print(f"U0: {ctrl_trajectory['U0'][i][settings['input_idx']]}, {'X' if ctrl_trajectory['X1'][i] is None else ' '}")
+
+    sys.exit('Quiting the program')
 

@@ -28,16 +28,16 @@ def get_settings():
     # displacement_planar = 0.01
     # displacement_vert = 0.0
 
-    N_synth = 15
+    N_synth = 1
     N_test = 100
     start = 0                              # time step to start sampling the trajectory with
-    T = 300                                  # number of samples per trajectory for controller synthesis
+    T = 100                                  # number of samples per trajectory for controller synthesis
     T_test = 60                            # number of samples per trajectory for performance evaluation
 
     # noise
     m_w = n                 # number of disturbance variables w_k
     B_w = np.eye(n, m_w)
-    assumedBound = 0.001     # noise bound assumed for robust controller synthesis
+    assumedBound = 0.0001     # noise bound assumed for robust controller synthesis
 
     # performance metric
     Q = np.eye(n, n)
