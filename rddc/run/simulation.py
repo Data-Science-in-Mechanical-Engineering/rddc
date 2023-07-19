@@ -104,27 +104,13 @@ def synthesize_controller(settings, trajectories4synth):
         verbosity       = settings['output_verbosity']
     )
 
-    # Sanity check: Least squares solution
-    m = settings['m']
-    n = settings['n']
-    Q = settings['Q']
-    R = settings['R']
-    U0 = np.hstack([trajectories4synth[sysId]['U0'] for sysId in range(len(trajectories4synth))])
-    X0 = np.hstack([trajectories4synth[sysId]['X0'] for sysId in range(len(trajectories4synth))])
-    X1 = np.hstack([trajectories4synth[sysId]['X1'] for sysId in range(len(trajectories4synth))])
-    BA = np.linalg.lstsq(np.block([[U0],[X0]]).T, X1.T, rcond=None)[0].T
-    B = BA[:, :m]
-    A = BA[:, -n:]
-    print("Least squares A is: \n{0}".format(np.array_str(A, precision=3, suppress_small=True)))
-    print("Least squares B is: \n{0}".format(np.array_str(B, precision=3, suppress_small=True)))
-    print('\nSpectral radius of the identified open loop: \n{}\n'.format(control_utils.spectral_radius(A)))
-    if control_utils.check_controllability(A, B, tol=None):
-        print('Identified system is controllable')
-    else:
-        print('Identified system is not controllable')
-    from scipy.linalg import solve_discrete_are
-    X_nom = np.array(np.array(solve_discrete_are(A, B, Q, R)))
-    K_nom = - np.linalg.inv(R + B.T @ X_nom @ B) @ (B.T @ X_nom @ A)
+    func = getattr(controller_synthesis, 'sysId_ls_lqr')
+    K_nom = func(
+        trajectories    = trajectories4synth,
+        sysInfo         = settings,
+        verbosity       = settings['output_verbosity']
+    )
+    print('\nOptimal LQR controller: \n{}\n'.format(np.array_str(K_nom, precision=3)))
     print('\nOptimal LQR controller: \n{}\n'.format(np.array_str(K_nom, precision=3)))
     files.save_dict_npy(os.path.join(path, 'controller_sysId_LQR.npy'), {'controller': K_nom})
 

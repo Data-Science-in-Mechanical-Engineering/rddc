@@ -1,6 +1,35 @@
 import numpy as np
 import picos as pc
 from rddc.tools import control_utils
+from scipy.linalg import solve_discrete_are
+
+def sysId_ls_lqr(trajectories, sysInfo, verbosity=1):
+    """
+    Performs Least Squares identification of the system based on given trajectories
+    Synthesizes an LQR controller based on the identified system
+    """
+    m = sysInfo['m']
+    n = sysInfo['n']
+    Q = sysInfo['Q']
+    R = sysInfo['R']
+    U0 = np.hstack([trajectories[sysId]['U0'] for sysId in range(len(trajectories))])
+    X0 = np.hstack([trajectories[sysId]['X0'] for sysId in range(len(trajectories))])
+    X1 = np.hstack([trajectories[sysId]['X1'] for sysId in range(len(trajectories))])
+    BA = np.linalg.lstsq(np.block([[U0],[X0]]).T, X1.T, rcond=None)[0].T
+    B = BA[:, :m]
+    A = BA[:, -n:]
+    X = np.array(np.array(solve_discrete_are(A, B, Q, R)))
+    K = - np.linalg.inv(R + B.T @ X @ B) @ (B.T @ X @ A)
+    if verbosity>0:
+        print("Least squares A is: \n{0}".format(np.array_str(A, precision=3, suppress_small=True)))
+        print("Least squares B is: \n{0}".format(np.array_str(B, precision=3, suppress_small=True)))
+        print('\nSpectral radius of the identified open loop: \n{}\n'.format(control_utils.spectral_radius(A)))
+        if control_utils.check_controllability(A, B, tol=None):
+            print('Identified system is controllable')
+        else:
+            print('Identified system is not controllable')
+        print('\nOptimal syID LS LQR controller is found: \n{}\n'.format(K))
+    return K
 
 def robust_lqr_scenario(trajectories, noiseInfo, perfInfo, verbosity=1):
     """
