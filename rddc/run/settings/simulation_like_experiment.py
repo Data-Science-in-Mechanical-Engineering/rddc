@@ -27,6 +27,23 @@ def get_settings():
     pos_size = 0.01
     # displacement_planar = 0.01
     # displacement_vert = 0.0
+    filenames = [
+        'hover_000000_10Hz_1.0',
+        'hover_000003_10Hz_1.0',
+        'hover_001002_10Hz_1.0',
+        'hover_010001_10Hz_1.0',
+        'hover_010201_10Hz_1.0',
+        'hover_011002_10Hz_1.0',
+        'hover_100000_10Hz_1.0',
+        'hover_100012_10Hz_1.0',
+        'hover_103010_10Hz_1.0',
+        'hover_110002_10Hz_1.0',
+        'hover_110010_10Hz_1.0',
+        'hover_120001_10Hz_1.0',
+        'hover_120002_10Hz_1.0',
+        'hover_221000_10Hz_1.0',
+        'hover_300002_10Hz_1.0',
+    ]
 
     N_synth = 1
     N_test = 100
@@ -37,7 +54,7 @@ def get_settings():
     # noise
     m_w = n                 # number of disturbance variables w_k
     B_w = np.eye(n, m_w)
-    assumedBound = 0.0001     # noise bound assumed for robust controller synthesis
+    assumedBound = 0.003     # noise bound assumed for robust controller synthesis
 
     # performance metric
     Q = np.eye(n, n)

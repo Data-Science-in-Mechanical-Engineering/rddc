@@ -41,12 +41,13 @@ def get_trajectories(settings, paths):
             trajectory['X0'][:, idx] = trajectories_origin['X0'][idx_origin][state_idx]
             trajectory['X1'][:, idx] = trajectories_origin['X1'][idx_origin][state_idx]
 
+        print(f"Extracted trajectory with {num_points} points located in\n\t{path}")
         trajectories.append(trajectory)
 
     return trajectories
 
 def synthesize_controller(settings, trajectories4synth):
-    path = os.path.join('data', 'experiment', ARGS.filename)
+    path = os.path.join('data', 'experiment')
     func = getattr(controller_synthesis, settings['algorithm'])
     K = func(
         trajectories    = trajectories4synth,
@@ -55,27 +56,12 @@ def synthesize_controller(settings, trajectories4synth):
         verbosity       = settings['output_verbosity']
     )
 
-    # Sanity check: Least squares solution
-    m = settings['m']
-    n = settings['n']
-    Q = settings['Q']
-    R = settings['R']
-    U0 = np.hstack([trajectories4synth[sysId]['U0'] for sysId in range(len(trajectories4synth))])
-    X0 = np.hstack([trajectories4synth[sysId]['X0'] for sysId in range(len(trajectories4synth))])
-    X1 = np.hstack([trajectories4synth[sysId]['X1'] for sysId in range(len(trajectories4synth))])
-    BA = np.linalg.lstsq(np.block([[U0],[X0]]).T, X1.T, rcond=None)[0].T
-    B = BA[:, :m]
-    A = BA[:, -n:]
-    print("Least squares A is: \n{0}".format(np.array_str(A, precision=3, suppress_small=True)))
-    print("Least squares B is: \n{0}".format(np.array_str(B, precision=3, suppress_small=True)))
-    print('\nSpectral radius of the identified open loop: \n{}\n'.format(control_utils.spectral_radius(A)))
-    if control_utils.check_controllability(A, B, tol=None):
-        print('Identified system is controllable')
-    else:
-        print('Identified system is not controllable')
-    from scipy.linalg import solve_discrete_are
-    X_nom = np.array(np.array(solve_discrete_are(A, B, Q, R)))
-    K_nom = - np.linalg.inv(R + B.T @ X_nom @ B) @ (B.T @ X_nom @ A)
+    func = getattr(controller_synthesis, 'sysId_ls_lqr')
+    K_nom = func(
+        trajectories    = trajectories4synth,
+        sysInfo         = settings,
+        verbosity       = settings['output_verbosity']
+    )
     print('\nOptimal LQR controller: \n{}\n'.format(np.array_str(K_nom, precision=3)))
     files.save_dict_npy(os.path.join(path, 'controller_sysId_LQR.npy'), {'controller': K_nom})
 
@@ -91,25 +77,29 @@ def synthesize_controller(settings, trajectories4synth):
 
     return K
 
-def run(settings, ARGS):
+def run(settings):
 
-    paths = [os.path.join('data', 'experiment', ARGS.filename, 'trajectory.npy')]
+    paths = [os.path.join('data', 'experiment', filename, 'trajectory.npy') for filename in settings['filenames']]
     trajectories4synth = get_trajectories(settings, paths)
     # check_trajectories(settings, trajectories4synth, test_type='willems')
     K = synthesize_controller(settings, trajectories4synth=trajectories4synth)
     # print('\nDDC controller: \n{}\n'.format(K))
 
 if __name__=='__main__':
+    settings = get_settings()
 
     #### Define and parse (optional) arguments for the script ##
     parser = argparse.ArgumentParser(description='Modular script to synthesize an RDDC controller from experiment data')
-    parser.add_argument('--filename',           default='?',      type=str,           help='Experiment file name', metavar='')
-    # parser.add_argument('--train',      action='store_true',       default=False,     help='Run training flight simulations and save their trajectories')
-    # parser.add_argument('--K',          action='store_true',       default=False,     help='Run controller synthesis')
-    # parser.add_argument('--test',       action='store_true',       default=False,     help='Run test flight simulations and save their trajectories')
-    # parser.add_argument('--eval',       action='store_true',       default=False,     help='Plot the test flight trajectory')
+    if not 'filenames' in settings:
+        settings.update({'filenames':[]})
+        parser.add_argument('--filenames', nargs='+', default=[], help='Experiment file names. It has not been found in settings, so it must be specified at input', metavar='')
+    else:
+        parser.add_argument('--filenames', nargs='*', default=[], help='Experiment file names. It has been found in settings, however, the input will replace them', metavar='')
     ARGS = parser.parse_args()
+    print(ARGS.filenames)
+    settings['filenames'] = settings['filenames'] + ARGS.filenames
+    if len(settings['filenames'])==0:
+        print("No training trajectories were given. Please specify the folder names in settings or/and in the input arguments")
 
-    settings = get_settings()
     # settings['suffix'] = ''
-    run(settings, ARGS)
+    run(settings)
