@@ -203,6 +203,20 @@ def parse_arguments(override_args=None, ignore_cli=False):
     return args
 
 
+def apply_process_noise(env, ARGS, rnd, processNoise):
+    if ARGS.proc_noise>0:
+        proc_noise = np.multiply((2*rnd.random(12)-1), processNoise)
+    else:
+        proc_noise = np.zeros(12)
+
+    for j in range(ARGS.num_drones):
+        env.pos[j] += proc_noise[0:3]
+        env.vel[j] += proc_noise[3:6]
+        env.rpy[j] += proc_noise[6:9]
+        env.quat[j] = p.getQuaternionFromEuler(env.rpy[j])
+        env.ang_v[j] += proc_noise[9:12]
+
+
 def run(settings, override_args=None):
     
     ignore_cli = override_args is not None
@@ -286,7 +300,10 @@ def run(settings, override_args=None):
     TARGET_RPY_RATE_COR = TARGET_RPY_RATE.copy()
 
     controlNoise = np.array([1. if k in settings['input_idx'] else 0. for k in range(12)]) * ARGS.ctrl_noise
-    processNoise = np.array([1. if k in settings['input_idx'] else 0. for k in range(12)]) * ARGS.proc_noise
+    processNoise = np.array([1. if k in settings['state_idx'] else 0. for k in range(12)]) * ARGS.proc_noise
+    # if 9 in settings['state_idx'] or 10 in settings['state_idx'] or 11 in settings['state_idx']:
+    #     print("Angular rates cannot be given process noise. Adjust 'state_idx' in settings")
+    #     raise ValueError
 
     if ARGS.num_samples>0:
         ARGS.duration_sec = ARGS.num_samples / ARGS.sfb_freq_hz
@@ -324,8 +341,11 @@ def run(settings, override_args=None):
                             )
     if settings['use_urdf']:
         os.replace(settings['urdfBackupPath'], settings['urdfOriginalPath']) #restore the urdf now, so that the controller doesn't notice it
+
     if not ARGS.draw_trajectory:
         for j in range(ARGS.num_drones):
+            print("Is this issue solved by not using URDFS?")
+            raise NotImplementedError
             # have to overwrite since for some reason pybullet calculates non-zero yaw in
             # _updateAndStoreKinematicInformation() even if INIT_RPYS is 0
             env.pos[j] = env.INIT_XYZS[j, :]
@@ -552,21 +572,15 @@ def run(settings, override_args=None):
 
             #### Compute control for the current way point #############
             for j in range(ARGS.num_drones):
-
-                if ARGS.proc_noise>0:
-                    proc_noise = np.multiply((2*rnd.random(12)-1), processNoise)
-                else:
-                    proc_noise = np.zeros(12)
-
                 try:
                     action[str(j)], _, _ = ctrl[j].computeControlFromState(
                         control_timestep=CTRL_EVERY_N_STEPS*env.TIMESTEP,
                         state=obs[str(j)]["state"],
                         # target_pos=np.hstack([TARGET_POS[wp_counters[j], 0:2], INIT_XYZS[j, 2]]),
-                        target_pos=TARGET_POS_COR[wp_counters[j], :, j] + proc_noise[0:3],
-                        target_vel=TARGET_VEL_COR[wp_counters[j], :, j] + proc_noise[3:6],
-                        target_rpy=TARGET_RPY_COR[wp_counters[j], :, j] + proc_noise[6:9],
-                        target_rpy_rates=TARGET_RPY_RATE_COR[wp_counters[j], :, j] + proc_noise[9:12],
+                        target_pos=TARGET_POS_COR[wp_counters[j], :, j],
+                        target_vel=TARGET_VEL_COR[wp_counters[j], :, j],
+                        target_rpy=TARGET_RPY_COR[wp_counters[j], :, j],
+                        target_rpy_rates=TARGET_RPY_RATE_COR[wp_counters[j], :, j],
                     )
                 except ValueError:
                     print('Value Error detected')
@@ -662,7 +676,10 @@ def run(settings, override_args=None):
             sync(i, START, env.TIMESTEP)
 
         lastObs = obs
-        obs, reward, done, info = env.step(action)
+        _, reward, done, info = env.step(action)
+        if i%SFB_EVERY_N_STEPS==0:
+            apply_process_noise(env, ARGS, rnd, processNoise)
+            obs = env._computeObs()
         i += 1
 
     env.close()
