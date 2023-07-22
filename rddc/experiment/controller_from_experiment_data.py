@@ -41,7 +41,7 @@ def get_trajectories(settings, paths):
             trajectory['X0'][:, idx] = trajectories_origin['X0'][idx_origin][state_idx]
             trajectory['X1'][:, idx] = trajectories_origin['X1'][idx_origin][state_idx]
 
-        print(f"Extracted trajectory with {num_points} points located in\n\t{path}")
+        print(f"Using trajectory at: \t{path}\nnumber of points:\t{num_points}")
         trajectories.append(trajectory)
 
     return trajectories
@@ -96,7 +96,10 @@ if __name__=='__main__':
     else:
         parser.add_argument('--filenames', nargs='*', default=[], help='Experiment file names. It has been found in settings, however, the input will replace them', metavar='')
     ARGS = parser.parse_args()
-    print(ARGS.filenames)
+    # print(ARGS.filenames)
+    if 'only' in ARGS.filenames: # only use CLI filenames for controller synthesis -> remove filenames from settings
+        settings.update({'filenames':[]})
+        ARGS.filenames.remove('only')
     settings['filenames'] = settings['filenames'] + ARGS.filenames
     if len(settings['filenames'])==0:
         print("No training trajectories were given. Please specify the folder names in settings or/and in the input arguments")

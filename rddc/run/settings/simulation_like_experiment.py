@@ -20,6 +20,7 @@ def get_settings():
     check_slater = False
     check_willems = False
     algorithm = 'robust_stabilization_scenario_slemma'
+    # algorithm = 'robust_lqr_scenario_slemma'
     output_verbosity = 0
 
     # Extra weight distribution
@@ -54,7 +55,7 @@ def get_settings():
     # noise
     m_w = n                 # number of disturbance variables w_k
     B_w = np.eye(n, m_w)
-    assumedBound = 0.003     # noise bound assumed for robust controller synthesis
+    assumedBound = 0.001     # noise bound assumed for robust controller synthesis
 
     # performance metric
     Q = np.eye(n, n)
