@@ -32,3 +32,15 @@ def get_trajectory_hover(height, num_points):
         pos_soll[i] = [ 0.0, 0.0, height]
         vel_soll[i] = [ 0.0, 0.0, 0.0]
     return pos_soll, vel_soll
+
+def get_trajectory_line(start, finish, num_points, duration):
+    """
+    going fron start point to finish point at constant speed
+    """
+    pos_soll=np.zeros((num_points,3))
+    vel_soll=np.zeros((num_points,3))
+    for i in range(num_points):
+        progress = i / (num_points-1)
+        pos_soll[i] = start * (1-progress) + finish * progress
+        vel_soll[i] = (finish - start) / duration
+    return pos_soll, vel_soll

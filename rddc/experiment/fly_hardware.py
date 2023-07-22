@@ -64,9 +64,9 @@ def manual_land(allcfs, time_helper, targetHeight, duration, N_steps=10):
     """
     latency = duration/N_steps
     for cf in allcfs.crazyflies:
-        startHeight = cf.position()[2]
+        start_pos = cf.position()
         for i in range(N_steps):
-            z = startHeight + (targetHeight-startHeight) * (i+1)/N_steps
+            z = start_pos[2] + (targetHeight-start_pos[2]) * (i+1)/N_steps
             # cf.cmdFullState(
             #     pos     = [0., 0., z],
             #     vel     = [0., 0., 0.,],
@@ -74,7 +74,7 @@ def manual_land(allcfs, time_helper, targetHeight, duration, N_steps=10):
             #     yaw     = 0.,
             #     omega   = [0., 0., 0.,],
             # )
-            cf.cmdPosition([0,0,z], 0,)
+            cf.cmdPosition([start_pos[0],start_pos[1],z], 0,)
             time_helper.sleep(latency)
 
 
@@ -124,10 +124,20 @@ def interp_trajectory(trajectory, period, time_target):
     """
     linear interpolation of the trajectory between two neighboring nodes
     """
+    print(f"time_target: {time_target}")
+    time_target = min(time_target, period*0.999999)
+    print(f"time_target: {time_target}")
     s = np.mod(time_target, period) / period
+    print(f"s: {s}")
     id_0 = np.mod(int(np.floor(s * trajectory.shape[0])), trajectory.shape[0])
+    print(f"id0: {id_0}")
     id_1 = np.mod(int(np.ceil(s * trajectory.shape[0])), trajectory.shape[0])
-    dist = s*trajectory.shape[0] - id_0
+    print(f"id1: {id_1}")
+    if id_0<id_1:
+        dist = s*trajectory.shape[0] - id_0
+    else:
+        dist = 0.
+    print(f"dist: {dist}")
     res = list()
     for dim in range(trajectory.shape[1]):
         res_0 = trajectory[id_0, dim]
@@ -313,13 +323,15 @@ if __name__ == "__main__":
 
     #### Init soll trajectory ############################
     radius = 1.0
-    height = 1.0
-    period = 20.0 # time (s) for one lap
-    trajectory_resolution   = 360
+    height = settings['trajectory_height']
+    period = settings['trajectory_period'] # time (s) for one lap
+    trajectory_resolution   = settings['trajectory_resolution']
     if settings['trajectory'] in ['hover']:
         pos_traj, vel_traj = get_trajectory_hover(height, trajectory_resolution)
     elif settings['trajectory'] in ['8']:
         pos_traj, vel_traj = get_trajectory_gerono(height, radius, trajectory_resolution, period)
+    elif settings['trajectory'] in ['line']:
+        pos_traj, vel_traj = get_trajectory_line(start=np.array([-1.,-1.,1.]), finish=np.array([1.,1.,1.]), num_points=trajectory_resolution, duration=period)
     else:
         print("Wrong trajectory name")
         raise ValueError
@@ -345,19 +357,14 @@ if __name__ == "__main__":
     print("taking off\n")
     allcfs.takeoff(targetHeight=height, duration=2.0)
     time_helper.sleep(2.5)
-
-    #TODO: Anto: why?
-    # time_helper.sleep(2.5)
-    # for i in range(trajectory_resolution):
-    #        for cf in allcfs.crazyflies:
-    #             cf.cmdPosition(pos_traj[i], 0,)           
-    #        time_helper.sleep(0.017) #TODO: latency?
+    print(f"\tGoing to trajectory start point:")
+    manual_goto(allcfs=allcfs, time_helper=time_helper, target=pos_traj[0], vel=0.5, N_steps=20)
 
     print("pause\n")
     # TODO: Anto: why? Pause to learn?
     for i in range(25):
         for cf in allcfs.crazyflies:
-            cf.cmdPosition([0,0,height], 0,)           
+            cf.cmdPosition(pos_traj[0], 0,)
         time_helper.sleep(.1)
 
     ctrl_trajectory = {'time':[],'U0':[], 'X0':[], 'X1':[]}
@@ -367,12 +374,13 @@ if __name__ == "__main__":
     keep_going = True
     while keep_going:
 
-        for i in range(1):
+        for i in range(5):
             for cf in allcfs.crazyflies:
-                cf.cmdPosition([0,0,height], 0,)           
+                cf.cmdPosition(pos_traj[0], 0,)
             time_helper.sleep(.1)
 
-        partially_disable_pid(settings, cf)
+        if settings['disable_pid']:
+            partially_disable_pid(settings, cf)
         start_time = time_helper.time()
         start_time_log = logger.retrieve_time()
         lap_time = 0.0
@@ -380,7 +388,7 @@ if __name__ == "__main__":
         main_counter = 0
         last_pos = np.zeros(3)
         for cf in allcfs.crazyflies:
-            cf.cmdPosition([0,0,height], 0,)  
+            cf.cmdPosition(pos_traj[0], 0,)
         print("Starting a new lap\n")
         lap_successful = True
         while lap_time < period:
@@ -454,38 +462,33 @@ if __name__ == "__main__":
             if not communication_ok:
                 break
             manual_stabilize(allcfs=allcfs, time_helper=time_helper, logger=logger, last_pos=last_pos, duration=0.4)
-            for cf in allcfs.crazyflies:
-                communication_ok = enable_slow_pid(settings, cf)
-            if not communication_ok:
-                break
-            print(f"\tGoing to origin:")
-            manual_goto(allcfs=allcfs, time_helper=time_helper, target=[0,0,height], vel=0.5, N_steps=10)
+        for cf in allcfs.crazyflies:
+            communication_ok = enable_slow_pid(settings, cf)
+        if not communication_ok:
+            break
+        print(f"\tGoing to origin:")
+        manual_goto(allcfs=allcfs, time_helper=time_helper, target=pos_traj[0], vel=0.5, N_steps=20)
 
         for cf in allcfs.crazyflies:
             communication_ok = enable_pid(settings, cf)
         if not communication_ok:
             break
 
-        for i in range(1):
-            for cf in allcfs.crazyflies:
-                cf.cmdPosition([0,0,height], 0,)
+        # for i in range(1):
+        #     for cf in allcfs.crazyflies:
+        #         cf.cmdPosition(pos_traj[0], 0,)
         if 'total_laps' in settings.keys():
             keep_going = lap_counter < settings['total_laps']
         else:
             keep_going = len(ctrl_trajectory['X0']) < settings['T']+lap_counter
 
 
-        #### Calculate performance ###########################
+        #### Lap report ###########################
         print(f"Lap {lap_counter} | finished: {lap_successful} | #data points: {len(ctrl_trajectory['X0'])}")
 
-        # TODO: Anto: why? Pause to learn?
-        # TODO: Anto: Why command the same position 25 times? Don't they remember it?
-        # -> Yep, they don't. Without any commands for 0.5s, cfs fall
-        #### Return to start ##################################
-        for i in range(25):
-            for cf in allcfs.crazyflies:
-                cf.cmdPosition([0,0,height], 0,)
-            time_helper.sleep(.1)
+    #### Return to start ##################################
+    print(f"\tGoing to origin:")
+    manual_goto(allcfs=allcfs, time_helper=time_helper, target=[0,0,height], vel=0.5, N_steps=20)
 
     #### Save Everything ##################################
     print("Saving the data")
