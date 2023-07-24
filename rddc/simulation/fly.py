@@ -205,16 +205,13 @@ def parse_arguments(override_args=None, ignore_cli=False):
 
 def apply_process_noise(env, ARGS, rnd, processNoise):
     if ARGS.proc_noise>0:
-        proc_noise = np.multiply((2*rnd.random(12)-1), processNoise)
-    else:
-        proc_noise = np.zeros(12)
-
-    for j in range(ARGS.num_drones):
-        env.pos[j] += proc_noise[0:3]
-        env.vel[j] += proc_noise[3:6]
-        env.rpy[j] += proc_noise[6:9]
-        env.quat[j] = p.getQuaternionFromEuler(env.rpy[j])
-        env.ang_v[j] += proc_noise[9:12]
+        for j in range(ARGS.num_drones):
+            proc_noise = np.multiply((2*rnd.random(12)-1), processNoise)
+            env.pos[j] += proc_noise[0:3]
+            env.vel[j] += proc_noise[3:6]
+            env.rpy[j] += proc_noise[6:9]
+            env.quat[j] = p.getQuaternionFromEuler(env.rpy[j])
+            env.ang_v[j] += proc_noise[9:12]
 
 
 def run(settings, override_args=None):
@@ -310,7 +307,7 @@ def run(settings, override_args=None):
 
     #### Create the environment with or without video capture ##
     extra_loads = list() if settings['use_urdf'] else settings['extra_loads']
-    if ARGS.variation: 
+    if ARGS.variation:
         env = VariationAviary(  drone_model=ARGS.drone,
                                 num_drones=ARGS.num_drones,
                                 initial_xyzs=INIT_XYZS,
@@ -325,7 +322,7 @@ def run(settings, override_args=None):
                                 user_debug_gui=ARGS.user_debug_gui,
                                 extra_loads=extra_loads,
                                 )
-    else: 
+    else:
         env = CtrlAviary(   drone_model=ARGS.drone,
                             num_drones=ARGS.num_drones,
                             initial_xyzs=INIT_XYZS,
@@ -341,18 +338,6 @@ def run(settings, override_args=None):
                             )
     if settings['use_urdf']:
         os.replace(settings['urdfBackupPath'], settings['urdfOriginalPath']) #restore the urdf now, so that the controller doesn't notice it
-
-    if not ARGS.draw_trajectory:
-        for j in range(ARGS.num_drones):
-            print("Is this issue solved by not using URDFS?")
-            raise NotImplementedError
-            # have to overwrite since for some reason pybullet calculates non-zero yaw in
-            # _updateAndStoreKinematicInformation() even if INIT_RPYS is 0
-            env.pos[j] = env.INIT_XYZS[j, :]
-            env.rpy[j] = env.INIT_RPYS[j, :]
-            env.quat[j] = p.getQuaternionFromEuler(env.INIT_RPYS[j, :])
-            env.vel[j] = np.array([0.,0.,0.])
-            env.ang_v[j] = np.array([0.,0.,0.])
 
     #### Obtain the PyBullet Client ID from the environment ####
     PYB_CLIENT = env.getPyBulletClient()
@@ -676,7 +661,7 @@ def run(settings, override_args=None):
             sync(i, START, env.TIMESTEP)
 
         lastObs = obs
-        _, reward, done, info = env.step(action)
+        obs, reward, done, info = env.step(action)
         if i%SFB_EVERY_N_STEPS==0:
             apply_process_noise(env, ARGS, rnd, processNoise)
             obs = env._computeObs()
