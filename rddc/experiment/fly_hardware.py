@@ -16,13 +16,14 @@ import shutil
 # sys.path.insert(0, "../")
 # sys.path.insert(0, ".")
 from pycrazyswarm import *
-from dmitrii_drones.controller import SimpleStateFeedbackController
-# from dmitrii_drones.settings import get_settings
-from dmitrii_drones.trajectory import *
-from dmitrii_drones.cf_loggers import bufferStateLogger, viconStateLogger
+from experiment.rddc.rddc.experiment.dmitrii_drones.controller import SimpleStateFeedbackController
+# from experiment.rddc.rddc.experiment.dmitrii_drones.settings import get_settings
+from experiment.rddc.rddc.experiment.dmitrii_drones.trajectory import *
+from experiment.rddc.rddc.experiment.dmitrii_drones.cf_loggers import bufferStateLogger, viconStateLogger
 import importlib
 import argparse
 
+basepath = os.path.join('experiment','rddc','rddc','experiment')
 statenames = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'roll', 'pitch', 'yaw', 'roll rate', 'pitch rate', 'yaw rate']
 
 def threaded_log_run(logger: viconStateLogger):
@@ -32,7 +33,7 @@ def init_controller(settings):
     state_idx = settings['state_idx']
     input_idx = settings['input_idx']
     K = np.zeros((12,12))
-    path = os.path.join('dmitrii_drones', 'controllers')
+    path = os.path.join(basepath, 'dmitrii_drones', 'controllers')
     controller = np.load(os.path.join(path, settings['sfb_name']+'.npy'), allow_pickle=True).item()
     for row, r_idx in enumerate(input_idx):
         for col, c_idx in enumerate(state_idx):
@@ -255,8 +256,8 @@ def partially_disable_pid(settings, cf):
         return False
     return True
 
-if __name__ == "__main__":
-
+def run():
+    
     parser = argparse.ArgumentParser(description="Module to run hardware experiments on craziflies")
     parser.add_argument('--train',  action='store_true',    default=False)
     parser.add_argument('--test',   action='store_true',    default=False)
@@ -265,11 +266,11 @@ if __name__ == "__main__":
     if not ARGS.train:
         assert ARGS.test
         test_or_train = 'test'
-        settings_module = importlib.import_module('dmitrii_drones.settings_test')
+        settings_module = importlib.import_module('experiment.rddc.rddc.experiment.dmitrii_drones.settings_test')
     else:
         assert ARGS.train
         test_or_train = 'train'
-        settings_module = importlib.import_module('dmitrii_drones.settings_train')
+        settings_module = importlib.import_module('experiment.rddc.rddc.experiment.dmitrii_drones.settings_train')
 
     #### Read the settings and create the path ###########
     settings = settings_module.get_settings()
@@ -305,7 +306,7 @@ if __name__ == "__main__":
     codepath = os.getcwd()
     # print(settings['weight_combination'])
     testcase_name = settings['trajectory'] + '_' + settings['weight_combination'] + '_' + str(rddc_rate) + 'Hz_' + str(settings['ctrl_noise'])
-    savepath = os.path.join('/home','franka_panda','dmitrii_drones',testcase_name)
+    savepath = os.path.join('crazyswarm_logs', 'data',testcase_name)
     if not(os.path.exists(savepath)):
         os.makedirs(savepath)
     if not(os.path.exists(os.path.join(savepath,'dmitrii_drones'))):
@@ -514,3 +515,6 @@ if __name__ == "__main__":
 
     sys.exit('Quiting the program')
 
+
+if __name__ == "__main__":
+    run()
