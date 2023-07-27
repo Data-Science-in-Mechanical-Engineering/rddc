@@ -3,8 +3,7 @@ import numpy as np
 def get_settings():
     name = 'simulation'
     suffix = 'paper'
-    seed = 42
-    train_trajectory_path = 'traj_train_'
+    seed = 43
     eps = 1e-8
     controllability_tol = 1e-3
     state_idx = [0,1,3,4,6,7]
@@ -35,21 +34,21 @@ def get_settings():
     #     {'mass': 0.0018,'position':np.array([-0.001, -0.001, -0.001]), 'form':'ball', 'size':[0.0]},
     # ]
     extra_loads_test = list() # leave empty ("list()") if you want to pick them randomly
-    mass_range = [0, 0.005]
-    pos_size = 0.015
+    mass_range = [0, 0.012]
+    pos_size = 0.010
     # displacement_planar = 0.01
     # displacement_vert = 0.0
 
-    N_synth = 15
-    N_test = 50
+    N_synth = 1
+    N_test = 5
     start = 0                              # time step to start sampling the trajectory with
-    T = 300                                  # number of samples per trajectory for controller synthesis
-    T_test = 120                            # number of samples per trajectory for performance evaluation
+    T = 500                                  # number of samples per trajectory for controller synthesis
+    T_test = 60                            # number of samples per trajectory for performance evaluation
 
     # noise
     m_w = n                 # number of disturbance variables w_k
     B_w = np.eye(n, m_w)
-    assumedBound = 0.0002     # noise bound assumed for robust controller synthesis
+    assumedBound = 0.0001     # noise bound assumed for robust controller synthesis
 
     # performance metric
     Q = np.eye(n, n)*1
@@ -61,10 +60,10 @@ def get_settings():
     trainSettings = {
         'num_drones':N_synth,
         'sfb':None,
-        'sfb_freq_hz':50,
+        'sfb_freq_hz':10,
         'num_samples':T,
         'ctrl_noise':1.0,
-        'proc_noise':0.0001,
+        'proc_noise':0.00005,
         'traj':'hover',
         'part_pid_off':True,
         'traj_filename':None,
@@ -77,12 +76,12 @@ def get_settings():
     }
     testSettings = {
         'num_drones':N_test,
-        'sfb':'direct',
-        'sfb_freq_hz':50,
+        'sfb':'ceddc',
+        'sfb_freq_hz':10,
         'num_samples':T_test,
         'ctrl_noise':0.0,
-        'proc_noise':0.0001,
-        'traj':'8',
+        'proc_noise':0.00005,
+        'traj':'line',
         'part_pid_off':True,
         'traj_filename':None,
         'plot':False,

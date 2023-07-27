@@ -132,7 +132,7 @@ def get_init_xyzs(rnd, ARGS, R, H):
     return INIT_XYZS
 
 def get_init_rpys(rnd, ARGS):
-    spread = ARGS.init_xyzs_spread
+    spread = ARGS.init_rpys_spread
     num_drones = ARGS.num_drones
     INIT_RPYS = np.array([
         [0, 0, 0] + (2*rnd.random(3)-1)*np.array([1,1,0])*spread
@@ -171,11 +171,11 @@ def parse_arguments(override_args=None, ignore_cli=False):
     parser.add_argument('--aggregate',          default=False,      type=str2bool,      help='Whether to aggregate physics steps (default: False)', metavar='')
     parser.add_argument('--obstacles',          default=False,      type=str2bool,      help='Whether to add obstacles to the environment (default: True)', metavar='')
     parser.add_argument('--simulation_freq_hz', default=2000,       type=int,           help='Simulation frequency in Hz (default: 240)', metavar='')
-    parser.add_argument('--control_freq_hz',    default=400,        type=int,           help='Control frequency in Hz (default: 100)', metavar='')
+    parser.add_argument('--control_freq_hz',    default=500,        type=int,           help='Control frequency in Hz (default: 100)', metavar='')
     parser.add_argument('--sfb_freq_hz',        default=10,         type=int,           help='State feedback frequency in Hz (default: 10)', metavar='')
     parser.add_argument('--duration_sec',       default=10,         type=int,           help='Duration of the simulation in seconds (default: 5)', metavar='')
     parser.add_argument('--num_samples',        default=-1,         type=int,           help='Number of samples required, will recalculate and overwrite the duration', metavar='')
-    parser.add_argument('--sfb',                default=None,       type=str,           help='Enable robust state feedback', metavar='', choices=[None, 'direct', 'indirect', 'prelim'])
+    parser.add_argument('--sfb',                default=None,       type=str,           help='Enable robust state feedback', metavar='', choices=[None, 'rddc', 'lslqr', 'prelim'])
     parser.add_argument('--ctrl_noise',         default=0.0,        type=float,         help='Reference trajectory input signal noise', metavar='')
     parser.add_argument('--proc_noise',         default=0.0,        type=float,         help='Process noise', metavar='')
     parser.add_argument('--traj',               default="hover",    type=str,           help='Trajectory to fly', metavar='', choices=['8', 'hover', 'circle', 'linex', 'line'])
@@ -186,7 +186,7 @@ def parse_arguments(override_args=None, ignore_cli=False):
     parser.add_argument('--init_xyzs_spread',   default=0.0,        type=float,         help='Spread in initial coordinates', metavar='')
     parser.add_argument('--init_rpys_spread',   default=0.0,        type=float,         help='Spread in initial orientations', metavar='')
     parser.add_argument('--cut_traj',           default=False,      type=str2bool,      help='Reset the simulation when the trajectory grows big', metavar='')
-    parser.add_argument('--wind_on',            default=False,      type=str2bool,      help='Turn on wind force', metavar='')
+    parser.add_argument('--wind_force',         default=0.0,        type=float,         help='Turn on wind force', metavar='')
     parser.add_argument('--wrap_wp',            default=True,       type=str2bool,      help='Wrap the trajectory. After reaching the last WP, start from the beginning', metavar='')
     parser.add_argument('--simulated_delay_ms', default=0.0,        type=float,         help='Simulation of sfb delay. Specify the latency in ms. Keep 0 to turn it off.', metavar='')
     parser.add_argument('--pid_type',           default='dsl',      type=str,           help='Type of the pid controller', metavar='', choices=['dsl', 'mellinger', 'emulator', 'simple'])
@@ -380,18 +380,13 @@ def run(settings, override_args=None):
     K = np.zeros((12,12))
     if  ARGS.sfb is not None:
         path = datapath
-        if ARGS.sfb in ['direct']:
-            controller_filename = 'controller.npy'
-        elif ARGS.sfb in ['indirect']:
-            controller_filename = 'controller_sysId_LQR.npy'
-        elif ARGS.sfb in ['prelim']:
-            controller_filename = 'controller_prelim.npy'
+        controller_filename = 'controller_'+ ARGS.sfb +'.npy'
         controller = np.load(os.path.join(path, controller_filename), allow_pickle=True).item()
         for row, r_idx in enumerate(input_idx):
             for col, c_idx in enumerate(state_idx):
                 K[r_idx, c_idx] = controller['controller'][row, col]
             #K[input_idx][:, state_idx] = controller['controller']
-    lqr = [SimpleStateFeedbackController(K=K) for i in range(ARGS.num_drones)]
+    sfb = [SimpleStateFeedbackController(K=K) for i in range(ARGS.num_drones)]
 
     #### Run the simulation ####################################
     CTRL_EVERY_N_STEPS = int(np.floor(env.SIM_FREQ/ARGS.control_freq_hz))
@@ -439,9 +434,9 @@ def run(settings, override_args=None):
     lastObs = obs
     while True:
 
-        if ARGS.wind_on:
+        if abs(ARGS.wind_force) > 0:
             if i/env.SIM_FREQ > 1.5:
-                env.WIND_FORCE = np.array([-1., 1., 0.])/20
+                env.WIND_FORCE = np.array([-1., 1., 0.]) * ARGS.wind_force
             if i/env.SIM_FREQ > 2.0:
                 env.WIND_FORCE = [0., 0., 0.]
 
@@ -519,7 +514,7 @@ def run(settings, override_args=None):
                 d_rpy_rate = cur_rpy_rate - TARGET_RPY_RATE[wp_counters[j], :, j]
 
                 if ARGS.sfb is not None:
-                    input_correction = lqr[j].computeControl(d_pos, d_vel, d_rpy, d_rpy_rate)
+                    input_correction = sfb[j].computeControl(d_pos, d_vel, d_rpy, d_rpy_rate)
 
                 if ARGS.ctrl_noise>0:
                     ctrl_noise = np.multiply((2*rnd.random(12)-1), controlNoise)
@@ -686,7 +681,7 @@ def run(settings, override_args=None):
     if ARGS.traj_filename is None:
         # traj_filename = "trajectory-sfb-rate-"+datetime.now().strftime("%m.%d.%Y_%H.%M.%S")
         train_or_test = 'train' if ARGS.sfb is None else 'test'
-        traj_filename = get_simulation_trajectory_path(settings, train_or_test)
+        traj_filename = get_simulation_trajectory_path(settings, train_or_test, ARGS.sfb)
     else:
         traj_filename = ARGS.traj_filename
     np.save(traj_filename+".npy", trajectories, allow_pickle=True)
