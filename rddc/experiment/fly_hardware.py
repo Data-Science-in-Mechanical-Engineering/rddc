@@ -79,7 +79,7 @@ def manual_land(cf, time_helper, targetHeight, duration, N_steps=10):
         time_helper.sleep(latency)
 
 
-def manual_goto(allcfs, time_helper, target, vel=0.3, N_steps=3):
+def manual_goto(cf, time_helper, target, vel=0.3, N_steps=3):
     """
     only works for one crazyflie
     """
@@ -94,7 +94,7 @@ def manual_goto(allcfs, time_helper, target, vel=0.3, N_steps=3):
         print(".")
         time_helper.sleep(latency)
 
-def manual_stabilize(allcfs, time_helper, logger, last_pos, duration = 1):
+def manual_stabilize(cf, time_helper, logger, last_pos, duration = 1):
     """
     only works for one crazyflie
     """
@@ -256,12 +256,12 @@ def partially_disable_pid(settings, cf):
         return False
     return True
 
-def run():
+def run(args):
     
     parser = argparse.ArgumentParser(description="Module to run hardware experiments on craziflies")
     parser.add_argument('--train',  action='store_true',    default=False)
     parser.add_argument('--test',   action='store_true',    default=False)
-    ARGS = parser.parse_args()
+    ARGS = parser.parse_args(args)
 
     if not ARGS.train:
         assert ARGS.test
@@ -303,17 +303,18 @@ def run():
         raise ValueError
 
     #### Saving paths #################################
-    codepath = os.getcwd()
+    codepath = os.path.join(os.getcwd(), 'experiment','rddc','rddc','experiment')
     # print(settings['weight_combination'])
     testcase_name = settings['trajectory'] + '_' + settings['weight_combination'] + '_' + str(rddc_rate) + 'Hz_' + str(settings['ctrl_noise'])
-    savepath = os.path.join('crazyswarm_logs', 'data',testcase_name)
+    savepath = os.path.join('/crazyswarm_logs', 'data',testcase_name)
     if not(os.path.exists(savepath)):
         os.makedirs(savepath)
     if not(os.path.exists(os.path.join(savepath,'dmitrii_drones'))):
         os.makedirs(os.path.join(savepath,'dmitrii_drones'))
     trajectory_path = os.path.join(savepath, 'trajectory.npy')
-    script_path_src = os.path.join(codepath,__file__)
-    script_path_dst = os.path.join(savepath,__file__)
+    absolute_trajectory_path = os.path.join(savepath, 'absolute_trajectory.npy')
+    script_path_src = os.path.join(codepath,os.path.basename(__file__))
+    script_path_dst = os.path.join(savepath,os.path.basename(__file__))
     settings_path_src = os.path.join(codepath,'dmitrii_drones','settings_'+test_or_train+'.py')
     settings_path_dst = os.path.join(savepath,'dmitrii_drones','settings_'+test_or_train+'.py')
     loggers_code_path_src = os.path.join(codepath,'dmitrii_drones','cf_loggers.py')
@@ -322,7 +323,6 @@ def run():
     trajectory_code_path_dst = os.path.join(savepath,'dmitrii_drones','trajectory.py')
     controller_code_path_src = os.path.join(codepath,'dmitrii_drones','controller.py')
     controller_code_path_dst = os.path.join(savepath,'dmitrii_drones','controller.py')
-    absolute_trajectory_path = os.path.join(savepath, 'absolute_trajectory.npy')
     absolute_trajectory_default_duration = 10 #s
     absolute_trajectory_default_length = absolute_trajectory_default_duration * main_rate
     absolute_trajectory = {
@@ -330,7 +330,19 @@ def run():
         'state':np.zeros((12,absolute_trajectory_default_length)),
         'rate': main_rate,
     }
+    # print(f"codepath: {codepath}")
+    # print(os.path.exists(codepath))
+    # print(f"savepath: {savepath}")
+    # print(os.path.exists(savepath))
+    # print(os.path.exists(os.path.join(savepath,'dmitrii_drones')))
+    # print()
+    # print(script_path_src)
+    # print(script_path_dst)
+    # print(settings_path_src)
+    # print(settings_path_dst)
+    # print()
 
+    # raise NotImplementedError
     #### Init soll trajectory ############################
     radius = 1.0
     height = settings['trajectory_height']
@@ -341,7 +353,7 @@ def run():
     elif settings['trajectory'] in ['8']:
         pos_traj, vel_traj = get_trajectory_gerono(height, radius, trajectory_resolution, period)
     elif settings['trajectory'] in ['line']:
-        pos_traj, vel_traj = get_trajectory_line(start=np.array([-1.,-1.,1.]), finish=np.array([1.,1.,1.]), num_points=trajectory_resolution, duration=period)
+        pos_traj, vel_traj = get_trajectory_line(start=np.array([-1.,-1.,height]), finish=np.array([1.,1.,height]), num_points=trajectory_resolution, duration=period)
     else:
         print("Wrong trajectory name")
         raise ValueError
@@ -368,7 +380,7 @@ def run():
     allcfs.takeoff(targetHeight=height, duration=2.0)
     time_helper.sleep(2.5)
     print(f"\tGoing to trajectory start point:")
-    manual_goto(allcfs=allcfs, time_helper=time_helper, target=pos_traj[0], vel=0.5, N_steps=20)
+    manual_goto(cf, time_helper=time_helper, target=pos_traj[0], vel=0.5, N_steps=40)
 
     print("pause\n")
     # TODO: Anto: why? Pause to learn?
@@ -382,9 +394,10 @@ def run():
     #### Lemniscate trajectory ###################
     # for rounds in range(total_laps):
     keep_going = True
+    main_counter = 0
     while keep_going:
 
-        for i in range(5):
+        for i in range(10):
             # for cf in allcfs.crazyflies:
             cf.cmdPosition(pos_traj[0], 0,)
             time_helper.sleep(.1)
@@ -395,7 +408,6 @@ def run():
         start_time_log = logger.retrieve_time()
         lap_time = 0.0
         ctrl_counter = 0
-        main_counter = 0
         last_pos_cf = np.zeros(3)
         # for cf in allcfs.crazyflies:
         cf.cmdPosition(pos_traj[0], 0,)
@@ -451,7 +463,7 @@ def run():
                 #TODO: Hmmm, the trajectory is not perfectly equidistant. Is that a problem?
                 ctrl_counter = ctrl_counter + 1
             if main_counter>(absolute_trajectory['time'].shape[0]-1):
-                absolute_trajectory['time'] = np.hstack([absolute_trajectory['time'], np.zeros(absolute_trajectory)])
+                absolute_trajectory['time'] = np.hstack([absolute_trajectory['time'], np.zeros(absolute_trajectory_default_length)])
                 absolute_trajectory['state'] = np.hstack([absolute_trajectory['state'], np.zeros((12,absolute_trajectory_default_length))])
             absolute_trajectory['time'][main_counter] = lap_time
             absolute_trajectory['state'][:, main_counter] = ist
@@ -466,16 +478,16 @@ def run():
             communication_ok = enable_recovery_pid(settings, cf)
             if not communication_ok:
                 break
-            manual_stabilize(allcfs=allcfs, time_helper=time_helper, logger=logger, last_pos=last_pos_cf, duration=0.4)
+            manual_stabilize(cf, time_helper=time_helper, logger=logger, last_pos=last_pos_cf, duration=0.4)
         # for cf in allcfs.crazyflies:
         communication_ok = enable_slow_pid(settings, cf)
         if not communication_ok:
             break
         print(f"\tGoing to origin:")
-        manual_goto(allcfs=allcfs, time_helper=time_helper, target=pos_traj[0], vel=0.5, N_steps=20)
+        manual_goto(cf, time_helper=time_helper, target=pos_traj[0], vel=0.5, N_steps=40)
 
         # for cf in allcfs.crazyflies:
-        communication_ok = enable_pid(settings, cf)
+        communication_ok = enable_slow_pid(settings, cf)
         if not communication_ok:
             break
 
@@ -493,7 +505,13 @@ def run():
 
     #### Return to start ##################################
     print(f"\tGoing to origin:")
-    manual_goto(allcfs=allcfs, time_helper=time_helper, target=[0,0,height], vel=0.5, N_steps=20)
+    manual_goto(cf, time_helper=time_helper, target=[0,0,height], vel=0.5, N_steps=40)
+
+    #### Land #############################################
+    if communication_ok:
+        manual_land(cf, time_helper=time_helper, targetHeight=0.05, duration=2.0)
+    # allcfs.land(targetHeight=0.05, duration=2.0) #it doesn't work once cmdFullState has been issued
+    del(swarm)
 
     #### Save Everything ##################################
     print("Saving the data")
@@ -505,16 +523,8 @@ def run():
     shutil.copy(controller_code_path_src, controller_code_path_dst)
     print("Done")
 
-    if communication_ok:
-        manual_land(allcfs=allcfs, time_helper=time_helper, targetHeight=0.05, duration=2.0)
-    # allcfs.land(targetHeight=0.05, duration=2.0) #it doesn't work once cmdFullState has been issued
-    del(swarm)
 
     for i in range(len(ctrl_trajectory['X0'])):
         print(f"U0: {ctrl_trajectory['U0'][i][settings['input_idx']]}, {'X' if ctrl_trajectory['X1'][i] is None else ' '}")
 
     sys.exit('Quiting the program')
-
-
-if __name__ == "__main__":
-    run()

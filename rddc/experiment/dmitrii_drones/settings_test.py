@@ -64,7 +64,7 @@ def get_settings():
     sfb_name = 'controller_exp_10Hz_15sys_w0.001'
     # sfb_name = 'controller_exp_sysId_10Hz_15sys'
     trajectory = 'line'
-    trajectory_height = 1.0
+    trajectory_height = 0.9
     trajectory_period = 5.0
     trajectory_resolution = 360
     weight_combination = '000000'
