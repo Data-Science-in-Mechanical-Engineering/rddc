@@ -60,22 +60,26 @@ def get_settings():
     kw_z        = 12000
     ki_m_z      = 500
 
-    sfb_name = 'controller_exp'
-    sfb_on = True
-    trajectory = '8'
+    disable_pid = True
+    sfb_name = 'controller_exp_10Hz_15sys_w0.001'
+    # sfb_name = 'controller_exp_sysId_10Hz_15sys'
+    trajectory = 'line'
+    trajectory_height = 1.0
+    trajectory_period = 5.0
+    trajectory_resolution = 360
     weight_combination = '000000'
     ctrl_noise = 0.0
     rddc_rate   = 10
     main_rate   = 100
     # T = 100                                  # number of samples per trajectory for controller synthesis
-    total_laps = 2
+    total_laps = 4
     safe_state_lims = [
-        [-1, 1],                #x
-        [-1, 1],                #y
+        [-1.5, 1.5],                #x
+        [-1.5, 1.5],                #y
         [0.7, 1.3],             #z
-        [-0.5, 0.5],            #vx
-        [-0.5, 0.5],            #vy
-        [-0.3, 0.3],            #vz
+        [-1.5, 1.5],            #vx
+        [-1.5, 1.5],            #vy
+        [-0.4, 0.4],            #vz
         [-15, 15],              #roll
         [-15, 15],              #pitch
         [-5, 5],              #yaw

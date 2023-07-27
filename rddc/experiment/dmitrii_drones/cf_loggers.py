@@ -2,7 +2,7 @@
 
 import rospy
 # from crazyswarm.ros_ws.src.crazyswarm.scripts.pycrazyswarm import GenericLogData
-from crazyswarm.msg import GenericLogData
+# from crazyswarm.msg import GenericLogData
 from geometry_msgs.msg import TransformStamped
 from scipy.spatial.transform import Rotation
 import numpy as np
@@ -194,7 +194,7 @@ class viconStateLogger():
         yar = (ya - self.vicon_buffer[i_prev, 9]) / (time - self.vicon_buffer[i_prev, 0])
         self.vicon_buffer[i_now, :] = [time, x, y, z, vx, vy, vz, r, p, ya, rr, pr, yar]
         self.vicon_idx = self.vicon_idx + 1
-        # print(f"{np.array_str(self.vicon_buffer[i_now, 7:10], precision=1)}")
+        # print(f"{np.array_str(self.vicon_buffer[i_now, :], precision=1)}")
 
 
     def log_run(self):

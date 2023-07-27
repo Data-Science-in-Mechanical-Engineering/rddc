@@ -60,27 +60,30 @@ def get_settings():
     kw_z        = 12000
     ki_m_z      = 500
 
-    sfb_name = 'controller_exp'
-    sfb_on = True
-    trajectory = '8'
+    disable_pid = True
+    # sfb_name = 'controller_exp_20Hz_1sys' # comment out to not use it
+    trajectory = 'hover'
+    trajectory_height = 1.0
+    trajectory_period = 5.0
+    trajectory_resolution = 360
     weight_combination = '000000'
-    ctrl_noise = 0.0
+    ctrl_noise = 1.0
     rddc_rate   = 10
     main_rate   = 100
-    # T = 100                                  # number of samples per trajectory for controller synthesis
-    total_laps = 2
+    T = 100                                  # number of samples per trajectory for controller synthesis
+    # total_laps = 2
     safe_state_lims = [
-        [-1, 1],                #x
-        [-1, 1],                #y
-        [0.7, 1.3],             #z
-        [-0.5, 0.5],            #vx
-        [-0.5, 0.5],            #vy
-        [-0.3, 0.3],            #vz
-        [-15, 15],              #roll
-        [-15, 15],              #pitch
+        [-1.0, 1.0],                #x
+        [-1.0, 1.0],                #y
+        [0.8, 1.2],             #z
+        [-0.7, 0.7],            #vx
+        [-0.7, 0.7],            #vy
+        [-0.2, 0.2],            #vz
+        [-10, 10],              #roll
+        [-10, 10],              #pitch
         [-5, 5],              #yaw
-        [-50, 50],            #roll rate
-        [-50, 50],            #pitch rate
+        [-30, 30],            #roll rate
+        [-30, 30],            #pitch rate
         [-10, 10],            #yaw rate
     ]
 
