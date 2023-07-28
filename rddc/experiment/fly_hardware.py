@@ -23,7 +23,7 @@ from dmitrii_drones.cf_loggers import bufferStateLogger, viconStateLogger
 import importlib
 import argparse
 
-basepath = os.path.join('experiment','rddc','rddc','experiment')
+basepath = '.'
 statenames = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'roll', 'pitch', 'yaw', 'roll rate', 'pitch rate', 'yaw rate']
 
 def threaded_log_run(logger: viconStateLogger):
@@ -305,7 +305,8 @@ def run(args):
     #### Saving paths #################################
     codepath = os.getcwd()
     # print(settings['weight_combination'])
-    testcase_name = settings['trajectory'] + '_' + settings['weight_combination'] + '_' + str(rddc_rate) + 'Hz_' + str(settings['ctrl_noise'])
+    sfb_suffix = ('_'+settings['sfb_name']) if 'sfb_name' in settings.keys() else ''
+    testcase_name = settings['trajectory'] + '_' + settings['weight_combination'] + '_' + str(rddc_rate) + 'Hz_' + str(settings['ctrl_noise']) + sfb_suffix
     savepath = os.path.join('/home', 'franka_panda', 'dmitrii_drones', testcase_name)
     if not(os.path.exists(savepath)):
         os.makedirs(savepath)
@@ -313,6 +314,7 @@ def run(args):
         os.makedirs(os.path.join(savepath,'dmitrii_drones'))
     trajectory_path = os.path.join(savepath, 'trajectory.npy')
     absolute_trajectory_path = os.path.join(savepath, 'absolute_trajectory.npy')
+    ref_trajectory_path = os.path.join(savepath, 'reference_trajectory.npy')
     script_path_src = os.path.join(codepath,os.path.basename(__file__))
     script_path_dst = os.path.join(savepath,os.path.basename(__file__))
     settings_path_src = os.path.join(codepath,'dmitrii_drones','settings_'+test_or_train+'.py')
@@ -360,7 +362,7 @@ def run(args):
 
     #### Init state logging ##############################
     # logger = bufferStateLogger(buffer_size=2)
-    vicon_frequency = 200 #Hz
+    vicon_frequency = 300 #Hz
     vicon_buffer_size = 5
     filtering_latency = vicon_buffer_size/vicon_frequency/2
     print(f"Vicon system is assumed to publish @ {vicon_frequency}Hz")
@@ -377,8 +379,9 @@ def run(args):
  
     #### Flight start ####################################
     print("taking off\n")
-    allcfs.takeoff(targetHeight=height, duration=2.0)
-    time_helper.sleep(2.5)
+    time_helper.sleep(1.0)
+    allcfs.takeoff(targetHeight=height, duration=2.5)
+    time_helper.sleep(3.0)
     print(f"\tGoing to trajectory start point:")
     manual_goto(cf, time_helper=time_helper, target=pos_traj[0], vel=0.5, N_steps=40)
 
@@ -397,7 +400,10 @@ def run(args):
     main_counter = 0
     while keep_going:
 
-        for i in range(10):
+        communication_ok = enable_pid(settings, cf)
+        if not communication_ok:
+            break
+        for i in range(20):
             # for cf in allcfs.crazyflies:
             cf.cmdPosition(pos_traj[0], 0,)
             time_helper.sleep(.1)
@@ -517,6 +523,7 @@ def run(args):
     print("Saving the data")
     np.save(trajectory_path, ctrl_trajectory, allow_pickle=True)
     np.save(absolute_trajectory_path, absolute_trajectory, allow_pickle=True)
+    np.save(ref_trajectory_path, pos_traj, allow_pickle=True)
     shutil.copy(script_path_src, script_path_dst)
     shutil.copy(settings_path_src, settings_path_dst)
     shutil.copy(trajectory_code_path_src, trajectory_code_path_dst)
