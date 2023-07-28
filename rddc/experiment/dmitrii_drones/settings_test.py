@@ -61,25 +61,28 @@ def get_settings():
     ki_m_z      = 500
 
     disable_pid = True
-    sfb_name = 'controller_exp_10Hz_15sys_w0.001'
-    # sfb_name = 'controller_exp_sysId_10Hz_15sys'
-    trajectory = 'line'
-    trajectory_height = 0.9
-    trajectory_period = 5.0
+    # sfb_name = 'controller_exp_10Hz_15sys_w0.001'
+    # sfb_name = 'controller_exp_2_cheeryPickedData'
+    # sfb_name = 'controller_exp_2_N14_T_200_w0.004'
+    # sfb_name = 'controller_rddc_sim_like_exp_10Hz_15sys_w0.002'
+    sfb_name = 'controller_rddc_sim_like_exp_50Hz_lessAgressive'
+    trajectory = '8'
+    trajectory_height = 1.0
+    trajectory_period = 10.0
     trajectory_resolution = 360
-    weight_combination = '000000'
+    weight_combination = '200011'
     ctrl_noise = 0.0
-    rddc_rate   = 10
+    rddc_rate   = 50
     main_rate   = 100
     # T = 100                                  # number of samples per trajectory for controller synthesis
-    total_laps = 4
+    total_laps = 2
     safe_state_lims = [
         [-1.5, 1.5],                #x
         [-1.5, 1.5],                #y
         [0.7, 1.3],             #z
-        [-1.5, 1.5],            #vx
-        [-1.5, 1.5],            #vy
-        [-0.4, 0.4],            #vz
+        [-1.8, 1.8],            #vx
+        [-1.8, 1.8],            #vy
+        [-0.5, 0.5],            #vz
         [-15, 15],              #roll
         [-15, 15],              #pitch
         [-5, 5],              #yaw
