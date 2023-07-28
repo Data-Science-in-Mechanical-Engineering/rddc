@@ -16,10 +16,10 @@ import shutil
 # sys.path.insert(0, "../")
 # sys.path.insert(0, ".")
 from pycrazyswarm import *
-from experiment.rddc.rddc.experiment.dmitrii_drones.controller import SimpleStateFeedbackController
-# from experiment.rddc.rddc.experiment.dmitrii_drones.settings import get_settings
-from experiment.rddc.rddc.experiment.dmitrii_drones.trajectory import *
-from experiment.rddc.rddc.experiment.dmitrii_drones.cf_loggers import bufferStateLogger, viconStateLogger
+from dmitrii_drones.controller import SimpleStateFeedbackController
+# from dmitrii_drones.settings import get_settings
+from dmitrii_drones.trajectory import *
+from dmitrii_drones.cf_loggers import bufferStateLogger, viconStateLogger
 import importlib
 import argparse
 
@@ -266,11 +266,11 @@ def run(args):
     if not ARGS.train:
         assert ARGS.test
         test_or_train = 'test'
-        settings_module = importlib.import_module('experiment.rddc.rddc.experiment.dmitrii_drones.settings_test')
+        settings_module = importlib.import_module('dmitrii_drones.settings_test')
     else:
         assert ARGS.train
         test_or_train = 'train'
-        settings_module = importlib.import_module('experiment.rddc.rddc.experiment.dmitrii_drones.settings_train')
+        settings_module = importlib.import_module('dmitrii_drones.settings_train')
 
     #### Read the settings and create the path ###########
     settings = settings_module.get_settings()
@@ -303,10 +303,10 @@ def run(args):
         raise ValueError
 
     #### Saving paths #################################
-    codepath = os.path.join(os.getcwd(), 'experiment','rddc','rddc','experiment')
+    codepath = os.getcwd()
     # print(settings['weight_combination'])
     testcase_name = settings['trajectory'] + '_' + settings['weight_combination'] + '_' + str(rddc_rate) + 'Hz_' + str(settings['ctrl_noise'])
-    savepath = os.path.join('/crazyswarm_logs', 'data',testcase_name)
+    savepath = os.path.join('/home', 'franka_panda', 'dmitrii_drones', testcase_name)
     if not(os.path.exists(savepath)):
         os.makedirs(savepath)
     if not(os.path.exists(os.path.join(savepath,'dmitrii_drones'))):
@@ -528,3 +528,6 @@ def run(args):
         print(f"U0: {ctrl_trajectory['U0'][i][settings['input_idx']]}, {'X' if ctrl_trajectory['X1'][i] is None else ' '}")
 
     sys.exit('Quiting the program')
+
+if __name__=='__main__':
+    run(sys.argv[1:])
