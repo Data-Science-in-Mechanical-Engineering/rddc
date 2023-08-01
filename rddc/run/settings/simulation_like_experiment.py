@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 def get_settings():
     name = 'simulation'
@@ -46,7 +47,7 @@ def get_settings():
     # noise
     m_w = n                 # number of disturbance variables w_k
     B_w = np.eye(n, m_w)
-    assumedBound = 0.001     # noise bound assumed for robust controller synthesis
+    assumedBound = 0.005     # noise bound assumed for robust controller synthesis
 
     # performance metric
     Q = np.eye(n, n)
@@ -61,7 +62,7 @@ def get_settings():
         'sfb_freq_hz':10,
         'num_samples':T,
         'ctrl_noise':1.0,
-        'proc_noise':0.003,
+        'proc_noise':0.0001,
         'traj':'hover',
         'part_pid_off':False,
         'traj_filename':None,
@@ -79,7 +80,7 @@ def get_settings():
         name,
         suffix,
         'train' + '_' + trainSettings['traj'] + \
-            + '_wBar' + str(assumedBound) + \
+            '_wBar' + str(assumedBound) + \
             '_T' + str(T) + \
             '_pn' + str(trainSettings['proc_noise']) + \
             '_delay' + str(trainSettings['simulated_delay_ms']) + \
