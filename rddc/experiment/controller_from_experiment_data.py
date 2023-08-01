@@ -6,7 +6,7 @@ it can be tested on a specified number of varying drones
 the resulting trajectory can be plotted
 """
 from rddc.tools import control_utils, controller_synthesis, files
-from rddc.run.settings.simulation_like_experiment import get_settings
+from rddc.run.settings.controller_from_exp_data import get_settings
 import numpy as np
 import os
 import argparse
