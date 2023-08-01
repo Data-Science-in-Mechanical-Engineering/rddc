@@ -35,12 +35,12 @@ def get_settings():
     # ]
     extra_loads_test = list() # leave empty ("list()") if you want to pick them randomly
     mass_range = [0.007, 0.015]
-    pos_size = [0.015, 0.015, 0.01]
+    pos_size = [0.015, 0.015, 0.003]
 
     N_synth = 10
     N_test = 100
     start = 0                              # time step to start sampling the trajectory with
-    T = 1000                               # number of samples per trajectory for controller synthesis
+    T = 500                               # number of samples per trajectory for controller synthesis
     T_test = 60                            # number of samples per trajectory for performance evaluation
 
     # noise
@@ -58,10 +58,10 @@ def get_settings():
     trainSettings = {
         'num_drones':N_synth,
         'sfb':None,
-        'sfb_freq_hz':20,
+        'sfb_freq_hz':10,
         'num_samples':T,
-        'ctrl_noise':2.0,
-        'proc_noise':0.005,
+        'ctrl_noise':1.0,
+        'proc_noise':0.003,
         'traj':'hover',
         'part_pid_off':False,
         'traj_filename':None,
@@ -71,9 +71,21 @@ def get_settings():
         # 'init_xyzs_spread':0.01,
         'gui':True,
         'pid_type':'mellinger',
-        'control_freq_hz':500,
-        'simulated_delay_ms':10
+        'control_freq_hz': 500,
+        'simulated_delay_ms':0
     }
+    trainSettings['traj_filename'] = os.path.join(
+        'data',
+        name,
+        suffix,
+        'train' + '_' + trainSettings['traj'] + \
+            + '_wBar' + str(assumedBound) + \
+            '_T' + str(T) + \
+            '_pn' + str(trainSettings['proc_noise']) + \
+            '_delay' + str(trainSettings['simulated_delay_ms']) + \
+            '_mass' + str(mass_range) + \
+            '_pos' + str(pos_size)
+    )
     testSettings = {
         'num_drones':N_test,
         'sfb':'rddc',
