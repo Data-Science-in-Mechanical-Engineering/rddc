@@ -58,13 +58,13 @@ def get_settings():
 
     trainSettings = {
         'num_drones':N_synth,
-        'sfb':None,
+        'sfb':'prelim',
         'sfb_freq_hz':20,
         'num_samples':T,
         'ctrl_noise':1.0,
         'proc_noise':0.0001,
         'traj':'hover',
-        'part_pid_off':False,
+        'part_pid_off':True,
         'traj_filename':None,
         'plot':False,
         'cut_traj':True,
@@ -73,7 +73,7 @@ def get_settings():
         'gui':True,
         'pid_type':'mellinger',
         'control_freq_hz': 500,
-        'simulated_delay_ms':30
+        'simulated_delay_ms':50
     }
     trainSettings['traj_filename'] = os.path.join(
         'data',
