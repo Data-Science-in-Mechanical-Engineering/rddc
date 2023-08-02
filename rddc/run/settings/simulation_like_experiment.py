@@ -36,7 +36,7 @@ def get_settings():
     # ]
     extra_loads_test = list() # leave empty ("list()") if you want to pick them randomly
     mass_range = [0.007, 0.015]
-    pos_size = [0.02, 0.02, 0.003]
+    pos_size = [0.01, 0.01, 0.003]
 
     N_synth = 10
     N_test = 100
@@ -56,13 +56,24 @@ def get_settings():
     C = np.array([[1,1,1,1,1,1]])
     D = np.array([[1, 1]])
 
+    vicon_freq = 300
+
     trainSettings = {
         'num_drones':N_synth,
         'sfb':'prelim',
         'sfb_freq_hz':20,
         'num_samples':T,
-        'ctrl_noise':1.0,
+        'ctrl_noise':0.0,
         'proc_noise':0.0001,
+        'meas_noise':[  5e-4,
+                        5e-4,
+                        5e-4,
+                        5e-4*vicon_freq,
+                        5e-4*vicon_freq,
+                        5e-4*vicon_freq,
+                        np.radians(0.001),
+                        np.radians(0.001),
+                        np.radians(0.001),],
         'traj':'hover',
         'part_pid_off':True,
         'traj_filename':None,
@@ -73,7 +84,7 @@ def get_settings():
         'gui':True,
         'pid_type':'mellinger',
         'control_freq_hz': 500,
-        'simulated_delay_ms':70
+        'simulated_delay_ms':50
     }
     trainSettings['traj_filename'] = os.path.join(
         'data',
