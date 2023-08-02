@@ -109,6 +109,20 @@ def get_settings():
         'pid_type':'mellinger'
     }
 
+    safe_state_lims = [
+        [-100, 100],            #x
+        [-100, 100],            #y
+        [0.1, 2],               #z
+        [-1.5, 1.5],            #vx
+        [-1.5, 1.5],            #vy
+        [-0.5, 0.5],            #vz
+        [-0.5, 0.5],            #roll
+        [-0.5, 0.5],            #pitch
+        [-0.1, 0.1],            #yaw
+        [-5.5, 5.5],            #roll rate
+        [-5.5, 5.5],            #pitch rate
+        [-0.5, 0.5],            #yaw rate
+    ]
     return locals()
 
 if __name__=='__main__':

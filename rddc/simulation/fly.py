@@ -214,6 +214,20 @@ def apply_process_noise(env, ARGS, rnd, processNoise):
             env.ang_v[j] += proc_noise[9:12]
 
 
+def find_unsafe_states(states, settings):
+    """
+    states should be arranged in the following order:
+    x,y,z, vx,vy,vz, r,p,y, rr, pr, yr
+    same applies to 'safe_state_lims' in settings
+    """
+    unsafe_states = list()
+    for idx in range(len(states)):
+        state = states[idx]
+        if state < settings['safe_state_lims'][idx][0] or state > settings['safe_state_lims'][idx][1]:
+            unsafe_states.append(idx)
+    return unsafe_states
+
+
 def run(settings, override_args=None):
     
     ignore_cli = override_args is not None
@@ -222,7 +236,7 @@ def run(settings, override_args=None):
 
     rnd = np.random.default_rng(seed=settings['seed'])
     #### Initialize the simulation #############################
-    H = 0.8
+    H = 1.0
     R = .5
 
     INIT_XYZS = get_init_xyzs(rnd, ARGS, R, H)
@@ -538,10 +552,12 @@ def run(settings, override_args=None):
                 print(f"Finished sample #{traj_counters[j]}")
 
                 # check the state vector for signs of instability
-                d_state = np.concatenate([d_pos, d_vel, d_rpy])
+                d_state = np.concatenate([cur_pos, cur_vel, cur_rpy, cur_rpy_rate])
                 if ARGS.cut_traj:
-                    if (np.linalg.norm(d_vel[:2])>1 or np.linalg.norm(d_rpy[:2], np.Inf)>1):
+                    unsafe_states = find_unsafe_states(d_state, settings)
+                    if len(unsafe_states)>0:
                         print(f"Reset required!, {traj_counters[0]}")
+                        print(f"unsafe states: {unsafe_states}")
                         resetRequired = True
             # else:
                 # print(f"Need to wait {waitWithSampling} steps until I start sampling")
