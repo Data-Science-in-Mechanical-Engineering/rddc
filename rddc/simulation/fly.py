@@ -550,7 +550,7 @@ def run(settings, override_args=None):
                 d_rpy_rate = cur_rpy_rate - TARGET_RPY_RATE[wp_counters[j], :, j]
 
                 if ARGS.sfb is not None:
-                    input_correction = 0.2*sfb[j].computeControl(d_pos, d_vel, d_rpy, d_rpy_rate)
+                    input_correction = sfb[j].computeControl(d_pos, d_vel, d_rpy, d_rpy_rate)
 
                 if ARGS.ctrl_noise>0:
                     ctrl_noise = np.multiply((2*rnd.random(12)-1), controlNoise)
