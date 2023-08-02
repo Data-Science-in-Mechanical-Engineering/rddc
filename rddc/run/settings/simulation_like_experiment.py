@@ -38,7 +38,7 @@ def get_settings():
     mass_range = [0.007, 0.015]
     pos_size = [0.01, 0.01, 0.003]
 
-    N_synth = 1
+    N_synth = 10
     N_test = 100
     start = 0                              # time step to start sampling the trajectory with
     T = 500                               # number of samples per trajectory for controller synthesis
@@ -63,7 +63,7 @@ def get_settings():
         'sfb':None,
         'sfb_freq_hz':20,
         'num_samples':T,
-        'ctrl_noise':0.0,
+        'ctrl_noise':1.0,
         'proc_noise':0.0001,
         'meas_noise':[  2e-4,
                         2e-4,
@@ -75,7 +75,7 @@ def get_settings():
                         np.radians(0.01),
                         np.radians(0.01),],
         'traj':'hover',
-        'part_pid_off':False,
+        'part_pid_off':True,
         'traj_filename':None,
         'plot':False,
         'cut_traj':True,
