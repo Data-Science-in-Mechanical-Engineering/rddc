@@ -38,7 +38,7 @@ def get_settings():
     mass_range = [0.007, 0.015]
     pos_size = [0.01, 0.01, 0.003]
 
-    N_synth = 10
+    N_synth = 1
     N_test = 100
     start = 0                              # time step to start sampling the trajectory with
     T = 500                               # number of samples per trajectory for controller synthesis
@@ -60,22 +60,22 @@ def get_settings():
 
     trainSettings = {
         'num_drones':N_synth,
-        'sfb':'prelim',
+        'sfb':None,
         'sfb_freq_hz':20,
         'num_samples':T,
         'ctrl_noise':0.0,
         'proc_noise':0.0001,
-        'meas_noise':[  5e-4,
-                        5e-4,
-                        5e-4,
-                        5e-4*vicon_freq,
-                        5e-4*vicon_freq,
-                        5e-4*vicon_freq,
-                        np.radians(0.001),
-                        np.radians(0.001),
-                        np.radians(0.001),],
+        'meas_noise':[  2e-4,
+                        2e-4,
+                        2e-4,
+                        2e-4*vicon_freq*2,
+                        2e-4*vicon_freq*2,
+                        2e-4*vicon_freq*2,
+                        np.radians(0.01),
+                        np.radians(0.01),
+                        np.radians(0.01),],
         'traj':'hover',
-        'part_pid_off':True,
+        'part_pid_off':False,
         'traj_filename':None,
         'plot':False,
         'cut_traj':True,
@@ -128,9 +128,9 @@ def get_settings():
         [-0.5, 0.5],            #roll
         [-0.5, 0.5],            #pitch
         [-0.1, 0.1],            #yaw
-        [-5.5, 5.5],            #roll rate
-        [-5.5, 5.5],            #pitch rate
-        [-0.5, 0.5],            #yaw rate
+        [-50, 50],            #roll rate
+        [-50, 50],            #pitch rate
+        [-50, 50],            #yaw rate
     ]
     return locals()
 
