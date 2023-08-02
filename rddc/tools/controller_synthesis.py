@@ -441,7 +441,8 @@ def robust_stabilization_scenario_slemma(trajectories, noiseInfo, perfInfo, verb
     v_b = pc.RealVariable('b')
 
     # problem.set_objective(None)
-    problem.set_objective('min', pc.trace(v_P))
+    # problem.set_objective('min', pc.trace(v_P))
+    problem.set_objective('min', v_a)
 
     # problem.add_constraint(v_P >> 1e-4)
     problem.add_constraint(v_P >> 1)
@@ -545,6 +546,7 @@ def robust_stabilization_scenario_slemma(trajectories, noiseInfo, perfInfo, verb
             b = v_b.value
             print(' L: {0}\n P: {1}\n a: {2}\n b: {3}\n'.format(np.array_str(L, precision=3), np.array_str(P, precision=3), a, b))
             print('\nOptimal controller is found: \n{}\n'.format(K))
+            print(f"DEBUG: eigenvalues of P: {np.linalg.eigvals(v_P)}")
 
     return K
 
