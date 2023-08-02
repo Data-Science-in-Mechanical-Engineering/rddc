@@ -4,7 +4,7 @@ import os
 def get_settings():
     name = 'simulation'
     suffix = 'like_experiment'
-    seed = 20
+    seed = 642
     eps = 1e-8
     controllability_tol = 1e-3
     state_idx = [0,1,3,4,6,7]
@@ -18,7 +18,7 @@ def get_settings():
     B = np.zeros((n,m))
     # algorithm = 'robust_hinf_scenario_slemma'
     check_slater = False
-    check_willems = False
+    check_willems = True
     algorithm = 'robust_stabilization_scenario_slemma'
     # algorithm = 'robust_lqr_scenario_slemma'
     # algorithm = 'robust_h2_scenario_slemma'
@@ -36,7 +36,7 @@ def get_settings():
     # ]
     extra_loads_test = list() # leave empty ("list()") if you want to pick them randomly
     mass_range = [0.007, 0.015]
-    pos_size = [0.01, 0.01, 0.003]
+    pos_size = [0.02, 0.02, 0.003]
 
     N_synth = 10
     N_test = 100
@@ -47,7 +47,7 @@ def get_settings():
     # noise
     m_w = n                 # number of disturbance variables w_k
     B_w = np.eye(n, m_w)
-    assumedBound = 0.003     # noise bound assumed for robust controller synthesis
+    assumedBound = 0.0005     # noise bound assumed for robust controller synthesis
 
     # performance metric
     Q = np.eye(n, n)
@@ -59,10 +59,10 @@ def get_settings():
     trainSettings = {
         'num_drones':N_synth,
         'sfb':None,
-        'sfb_freq_hz':10,
+        'sfb_freq_hz':20,
         'num_samples':T,
         'ctrl_noise':1.0,
-        'proc_noise':0.003,
+        'proc_noise':0.0001,
         'traj':'hover',
         'part_pid_off':False,
         'traj_filename':None,
@@ -73,7 +73,7 @@ def get_settings():
         'gui':True,
         'pid_type':'mellinger',
         'control_freq_hz': 500,
-        'simulated_delay_ms':0
+        'simulated_delay_ms':30
     }
     trainSettings['traj_filename'] = os.path.join(
         'data',
@@ -81,6 +81,7 @@ def get_settings():
         suffix,
         'train' + '_' + trainSettings['traj'] + \
             '_T' + str(T) + \
+            '_' + str(trainSettings['sfb_freq_hz']) + 'Hz' + \
             '_pn' + str(trainSettings['proc_noise']) + \
             '_delay' + str(trainSettings['simulated_delay_ms']) + \
             '_mass' + str(mass_range) + \
