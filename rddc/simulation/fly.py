@@ -673,7 +673,7 @@ def run(settings, override_args=None):
 
         lastObs = obs
         obs, reward, done, info = env.step(action)
-        if i%SFB_EVERY_N_STEPS==0:
+        if (i+1)%SFB_EVERY_N_STEPS==0:
             apply_process_noise(env, ARGS, rnd, processNoise)
             obs = env._computeObs()
         i += 1
