@@ -440,9 +440,11 @@ def robust_stabilization_scenario_slemma(trajectories, noiseInfo, perfInfo, verb
     v_a = pc.RealVariable('a')
     v_b = pc.RealVariable('b')
 
-    problem.set_objective(None)
+    # problem.set_objective(None)
+    problem.set_objective('min', pc.trace(v_P))
 
-    problem.add_constraint(v_P >> 1e-6)
+    # problem.add_constraint(v_P >> 1e-4)
+    problem.add_constraint(v_P >> 1)
     problem.add_constraint(v_a >= 0)
     problem.add_constraint(v_b > 0)
 
