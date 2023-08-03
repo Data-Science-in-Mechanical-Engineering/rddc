@@ -57,6 +57,10 @@ def get_settings():
     D = np.array([[1, 1]])
 
     vicon_freq = 300
+    vicon_error_x = 1e-4
+    vicon_error_v = vicon_error_x * vicon_freq * 2
+    vicon_error_rpy = np.radians(0.1)
+    vicon_error_rpy_rate = vicon_error_rpy * vicon_freq * 2
 
     trainSettings = {
         'num_drones':N_synth,
@@ -65,15 +69,18 @@ def get_settings():
         'num_samples':T,
         'ctrl_noise':1.0,
         'proc_noise':0.0001,
-        # 'meas_noise':[  2e-4,
-        #                 2e-4,
-        #                 2e-4,
-        #                 2e-4*vicon_freq*2,
-        #                 2e-4*vicon_freq*2,
-        #                 2e-4*vicon_freq*2,
-        #                 np.radians(0.01),
-        #                 np.radians(0.01),
-        #                 np.radians(0.01),],
+        'meas_noise_vicon':[vicon_error_x,
+                            vicon_error_x,
+                            vicon_error_x,
+                            vicon_error_v,
+                            vicon_error_v,
+                            vicon_error_v,
+                            vicon_error_rpy,
+                            vicon_error_rpy,
+                            vicon_error_rpy,
+                            vicon_error_rpy_rate,
+                            vicon_error_rpy_rate,
+                            vicon_error_rpy_rate,],
         'traj':'hover',
         'part_pid_off':True,
         'traj_filename':None,
@@ -84,7 +91,7 @@ def get_settings():
         'gui':True,
         'pid_type':'mellinger',
         'control_freq_hz': 500,
-        'simulated_delay_ms':50
+        'simulated_delay_ms':0
     }
     trainSettings['traj_filename'] = os.path.join(
         'data',

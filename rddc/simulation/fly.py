@@ -178,7 +178,8 @@ def parse_arguments(override_args=None, ignore_cli=False):
     parser.add_argument('--sfb',                default=None,       type=str,           help='Enable robust state feedback', metavar='', choices=[None, 'rddc', 'lslqr', 'prelim'])
     parser.add_argument('--ctrl_noise',         default=0.0,        type=float,         help='Reference trajectory input signal noise', metavar='')
     parser.add_argument('--proc_noise',         default=0.0,        type=float,         help='Process noise', metavar='')
-    parser.add_argument('--meas_noise',         default=None,       type=list,          help='Measurement noise', metavar='')
+    parser.add_argument('--meas_noise',         default=[],         type=list,          help="Measurement noise from craziflie's internal state observation", metavar='')
+    parser.add_argument('--meas_noise_vicon',   default=[],         type=list,          help='Measurement noise from vicon system', metavar='')
     parser.add_argument('--traj',               default="hover",    type=str,           help='Trajectory to fly', metavar='', choices=['8', 'hover', 'circle', 'linex', 'line'])
     parser.add_argument('--calc_cost',          default=False,      type=str2bool,      help='Whether to calculate and save LQR cost', metavar='')
     parser.add_argument('--part_pid_off',       default=True,       type=str2bool,      help='Tell PID to not control some states', metavar='')
@@ -216,24 +217,30 @@ def apply_process_noise(env, ARGS, rnd, processNoise):
 
 
 def apply_measurement_noise(obs, ARGS, rnd, measurementNoise):
-    if ARGS.meas_noise is not None:
+    if measurementNoise.shape[0]>0:
         for j in range(ARGS.num_drones):
             meas_noise = np.multiply((2*rnd.random(9)-1), measurementNoise)
             obs[str(j)]["state"][0:3] += meas_noise[0:3]
             obs[str(j)]["state"][10:13] += meas_noise[3:6]
             obs[str(j)]["state"][7:10] += meas_noise[6:9]
             obs[str(j)]["state"][3:7] = p.getQuaternionFromEuler(obs[str(j)]["state"][7:10])
+        # print(f"applied vicon measurement noise: {meas_noise}")
 
 
-# def extract_state_from_obs(j, obs, lastObs, env, rnd, measurementNoise):
-#     states      = obs[str(j)]["state"]
-#     cur_pos     = states[0:3]
-#     cur_rpy     = states[7:10]
-#     cur_vel     = states[10:13]
-#     last_rpy    = lastObs[str(j)]["state"][7:10]
-#     cur_rpy_rate= (cur_rpy - last_rpy)*env.SIM_FREQ
+def extract_state_from_obs(j, obs, lastObs, env, rnd, measurementNoiseVicon):
+    if measurementNoiseVicon.shape[0]>0:
+        meas_noise = np.multiply((2*rnd.random(12)-1), measurementNoiseVicon)
+    else:
+        meas_noise = np.array([0]*12)
+    states      = obs[str(j)]["state"]
+    cur_pos     = states[0:3] + meas_noise[0:3]
+    cur_vel     = states[10:13]  + meas_noise[3:6]
+    cur_rpy     = states[7:10]  + meas_noise[6:9]
+    last_rpy    = lastObs[str(j)]["state"][7:10]
+    cur_rpy_rate= (cur_rpy - last_rpy)*env.SIM_FREQ + meas_noise[9:12]
+    # print(f"applied vicon measurement noise: {meas_noise}")
 
-#     return cur_pos, cur_vel, cur_rpy, cur_rpy_rate
+    return cur_pos, cur_vel, cur_rpy, cur_rpy_rate
 
 def find_unsafe_states(states, settings):
     """
@@ -334,6 +341,7 @@ def run(settings, override_args=None):
     controlNoise = np.array([1. if k in settings['input_idx'] else 0. for k in range(12)]) * ARGS.ctrl_noise
     processNoise = np.array([1. if k in settings['state_idx'] else 0. for k in range(12)]) * ARGS.proc_noise
     measurementNoise = np.array(ARGS.meas_noise) #cannot be applied to angular rates, therefore only 9 entries
+    measurementNoiseVicon = np.array(ARGS.meas_noise_vicon)
     # if 9 in settings['state_idx'] or 10 in settings['state_idx'] or 11 in settings['state_idx']:
     #     print("Angular rates cannot be given process noise. Adjust 'state_idx' in settings")
     #     raise ValueError
@@ -484,13 +492,7 @@ def run(settings, override_args=None):
 
         if i%SFB_EVERY_N_STEPS == 0 and sfb_on and first_sfb_happened:
             for j in range(ARGS.num_drones):
-                states      = obs[str(j)]["state"]
-                cur_pos     = states[0:3]
-                cur_rpy     = states[7:10]
-                cur_vel     = states[10:13]
-                # cur_rpy_rate= states[13:16]
-                last_rpy    = lastObs[str(j)]["state"][7:10]
-                cur_rpy_rate= (cur_rpy - last_rpy)*env.SIM_FREQ
+                cur_pos, cur_vel, cur_rpy, cur_rpy_rate = extract_state_from_obs(j, obs, lastObs, env, rnd, measurementNoiseVicon)
                 d_pos = cur_pos - TARGET_POS[wp_counters[j], :, j]
                 d_vel = cur_vel - TARGET_VEL[wp_counters[j], :, j]
                 d_rpy = cur_rpy - TARGET_RPY[wp_counters[j], :, j]
@@ -538,12 +540,7 @@ def run(settings, override_args=None):
 
             for j in range(ARGS.num_drones):
                 input_correction = np.zeros(12)
-                states = obs[str(j)]["state"]
-                cur_pos     = states[0:3]
-                cur_rpy     = states[7:10]
-                cur_vel     = states[10:13]
-                last_rpy    = lastObs[str(j)]["state"][7:10]
-                cur_rpy_rate= (cur_rpy - last_rpy)*env.SIM_FREQ
+                cur_pos, cur_vel, cur_rpy, cur_rpy_rate = extract_state_from_obs(j, obs, lastObs, env, rnd, measurementNoiseVicon)
                 d_pos = cur_pos - TARGET_POS[wp_counters[j], :, j]
                 d_vel = cur_vel - TARGET_VEL[wp_counters[j], :, j]
                 d_rpy = cur_rpy - TARGET_RPY[wp_counters[j], :, j]
