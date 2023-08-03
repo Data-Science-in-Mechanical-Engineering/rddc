@@ -612,9 +612,9 @@ def robust_lqr_scenario_slemma(trajectories, noiseInfo, perfInfo, verbosity=1):
         (perf01.T   & perf11)
     )
 
-    problem.add_constraint(perf >> 0)
-    problem.add_constraint(v_X >> 0)
-    problem.add_constraint(v_P >> 1e-6)
+    problem.add_constraint(perf >> 1e-4)
+    problem.add_constraint(v_X >> 1e-4)
+    problem.add_constraint(v_P >> 1e-4)
     problem.add_constraint(v_a >= 0)
     problem.add_constraint(v_b > 0)
 
