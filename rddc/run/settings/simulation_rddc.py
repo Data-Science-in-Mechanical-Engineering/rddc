@@ -3,7 +3,7 @@ import numpy as np
 def get_settings():
     name = 'simulation'
     suffix = 'paper'
-    seed = 46
+    seed = 642
     eps = 1e-8
     controllability_tol = 1e-3
     state_idx = [0,1,3,4,6,7]
@@ -17,9 +17,9 @@ def get_settings():
     B = np.zeros((n,m))
     # algorithm = 'robust_hinf_scenario_slemma'
     check_slater = False
-    check_willems = False
-    algorithm = 'robust_stabilization_scenario_slemma'
-    # algorithm = 'robust_lqr_scenario_slemma'
+    check_willems = True
+    # algorithm = 'robust_stabilization_scenario_slemma'
+    algorithm = 'robust_lqr_scenario_slemma'
     # algorithm = 'robust_h2_scenario_slemma'
     output_verbosity = 0
 
@@ -34,7 +34,7 @@ def get_settings():
     #     {'mass': 0.0018,'position':np.array([-0.001, -0.001, -0.001]), 'form':'ball', 'size':[0.0]},
     # ]
     extra_loads_test = list() # leave empty ("list()") if you want to pick them randomly
-    mass_range = [0.007, 0.012]
+    mass_range = [0.007, 0.015]
     pos_size = [0.01, 0.01, 0.002]
     # displacement_planar = 0.01
     # displacement_vert = 0.0
@@ -48,22 +48,22 @@ def get_settings():
     # noise
     m_w = n                 # number of disturbance variables w_k
     B_w = np.eye(n, m_w)
-    assumedBound = 1e-5     # noise bound assumed for robust controller synthesis
+    assumedBound = 0.001     # noise bound assumed for robust controller synthesis
 
     # performance metric
-    Q = np.eye(n, n)*1
+    Q = np.eye(n, n)*np.diag([0,0,0,0,1,1])
     S = np.zeros((n, m))
-    R = np.eye(m, m)*1
+    R = np.eye(m, m)*0
     C = np.array([[1,1,1,1,1,1]])
     D = np.array([[1, 1]])
 
     trainSettings = {
         'num_drones':N_synth,
         'sfb':None,
-        'sfb_freq_hz':10,
+        'sfb_freq_hz':20,
         'num_samples':T,
         'ctrl_noise':1.0,
-        'proc_noise':0.0,
+        'proc_noise':0.0001,
         'traj':'hover',
         'part_pid_off':True,
         'traj_filename':None,
