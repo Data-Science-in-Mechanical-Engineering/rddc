@@ -438,8 +438,8 @@ def robust_stabilization_scenario_slemma(trajectories, noiseInfo, perfInfo, verb
     v_b = pc.RealVariable('b')
 
     # problem.set_objective(None)
-    problem.set_objective('min', pc.trace(v_P))
-    problem.options['dualize'] = True
+    # problem.set_objective('min', pc.trace(v_P))
+    # problem.options['dualize'] = True
 
     # problem.add_constraint(v_P >> 1e-4)
     problem.add_constraint(v_P >> 1)
@@ -602,6 +602,7 @@ def robust_lqr_scenario_slemma(trajectories, noiseInfo, perfInfo, verbosity=1):
     problem.set_objective('min', pc.trace(Q*v_P) + pc.trace(v_X))
     # problem.set_objective(None)
     # problem.set_objective('max', v_b)
+    problem.options['dualize'] = True
 
     perf00 = v_X
     perf01 = np.sqrt(R)  * v_L
@@ -612,7 +613,7 @@ def robust_lqr_scenario_slemma(trajectories, noiseInfo, perfInfo, verbosity=1):
     )
 
     problem.add_constraint(perf >> 0)
-    problem.add_constraint(v_X >> 1e-6)
+    problem.add_constraint(v_X >> 0)
     problem.add_constraint(v_P >> 1e-6)
     problem.add_constraint(v_a >= 0)
     problem.add_constraint(v_b > 0)

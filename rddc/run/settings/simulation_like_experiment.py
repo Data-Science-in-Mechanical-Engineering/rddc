@@ -19,8 +19,8 @@ def get_settings():
     # algorithm = 'robust_hinf_scenario_slemma'
     check_slater = False
     check_willems = True
-    algorithm = 'robust_stabilization_scenario_slemma'
-    # algorithm = 'robust_lqr_scenario_slemma'
+    # algorithm = 'robust_stabilization_scenario_slemma'
+    algorithm = 'robust_lqr_scenario_slemma'
     # algorithm = 'robust_h2_scenario_slemma'
     output_verbosity = 0
 
@@ -39,20 +39,20 @@ def get_settings():
     pos_size = [0.01, 0.01, 0.003]
 
     N_synth = 10
-    N_test = 100
+    N_test = 15
     start = 0                              # time step to start sampling the trajectory with
     T = 500                               # number of samples per trajectory for controller synthesis
-    T_test = 60                            # number of samples per trajectory for performance evaluation
+    T_test = 120                            # number of samples per trajectory for performance evaluation
 
     # noise
     m_w = n                 # number of disturbance variables w_k
     B_w = np.eye(n, m_w)
-    assumedBound = 0.0005     # noise bound assumed for robust controller synthesis
+    assumedBound = 0.001     # noise bound assumed for robust controller synthesis
 
     # performance metric
-    Q = np.eye(n, n)
+    Q = np.eye(n, n)*np.diag([1000,1000,0.001,0.001,1,1])
     S = np.zeros((n, m))
-    R = np.eye(m, m)
+    R = np.eye(m, m)*0
     C = np.array([[1,1,1,1,1,1]])
     D = np.array([[1, 1]])
 
@@ -65,15 +65,15 @@ def get_settings():
         'num_samples':T,
         'ctrl_noise':1.0,
         'proc_noise':0.0001,
-        'meas_noise':[  2e-4,
-                        2e-4,
-                        2e-4,
-                        2e-4*vicon_freq*2,
-                        2e-4*vicon_freq*2,
-                        2e-4*vicon_freq*2,
-                        np.radians(0.01),
-                        np.radians(0.01),
-                        np.radians(0.01),],
+        # 'meas_noise':[  2e-4,
+        #                 2e-4,
+        #                 2e-4,
+        #                 2e-4*vicon_freq*2,
+        #                 2e-4*vicon_freq*2,
+        #                 2e-4*vicon_freq*2,
+        #                 np.radians(0.01),
+        #                 np.radians(0.01),
+        #                 np.radians(0.01),],
         'traj':'hover',
         'part_pid_off':True,
         'traj_filename':None,
@@ -101,10 +101,10 @@ def get_settings():
     testSettings = {
         'num_drones':N_test,
         'sfb':'rddc',
-        'sfb_freq_hz':10,
+        'sfb_freq_hz':20,
         'num_samples':T_test,
         'ctrl_noise':0.0,
-        'proc_noise':0.001,
+        'proc_noise':0.0001,
         'traj':'8',
         'part_pid_off':True,
         'traj_filename':None,
@@ -115,16 +115,16 @@ def get_settings():
         'gui':True,
         'pid_type':'mellinger',
         'control_freq_hz':500,
-        'simulated_delay_ms':8
+        'simulated_delay_ms':50
     }
 
     safe_state_lims = [
         [-100, 100],            #x
         [-100, 100],            #y
         [0.1, 2],               #z
-        [-1.5, 1.5],            #vx
-        [-1.5, 1.5],            #vy
-        [-0.5, 0.5],            #vz
+        [-2.5, 2.5],            #vx
+        [-2.5, 2.5],            #vy
+        [-2.5, 2.5],            #vz
         [-0.5, 0.5],            #roll
         [-0.5, 0.5],            #pitch
         [-0.1, 0.1],            #yaw
