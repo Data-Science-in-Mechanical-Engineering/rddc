@@ -47,7 +47,7 @@ def get_settings():
     # noise
     m_w = n                 # number of disturbance variables w_k
     B_w = np.eye(n, m_w)
-    assumedBound = 0.01     # noise bound assumed for robust controller synthesis
+    assumedBound = 0.001     # noise bound assumed for robust controller synthesis
 
     # performance metric
     Q = np.eye(n, n)*np.diag([100,100,0.01,0.01,1,1])
@@ -69,18 +69,18 @@ def get_settings():
         'num_samples':T,
         'ctrl_noise':1.0,
         'proc_noise':0.0001,
-        'meas_noise_vicon':[vicon_error_x,
-                            vicon_error_x,
-                            vicon_error_x,
-                            vicon_error_v,
-                            vicon_error_v,
-                            vicon_error_v,
-                            vicon_error_rpy,
-                            vicon_error_rpy,
-                            vicon_error_rpy,
-                            vicon_error_rpy_rate,
-                            vicon_error_rpy_rate,
-                            vicon_error_rpy_rate,],
+        # 'meas_noise_vicon':[vicon_error_x,
+        #                     vicon_error_x,
+        #                     vicon_error_x,
+        #                     vicon_error_v,
+        #                     vicon_error_v,
+        #                     vicon_error_v,
+        #                     vicon_error_rpy,
+        #                     vicon_error_rpy,
+        #                     vicon_error_rpy,
+        #                     vicon_error_rpy_rate,
+        #                     vicon_error_rpy_rate,
+        #                     vicon_error_rpy_rate,],
         'traj':'hover',
         'part_pid_off':True,
         'traj_filename':None,
