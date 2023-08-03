@@ -26,19 +26,19 @@ def get_settings():
 
     # Extra weight distribution
     extra_loads = list() # do not touch this one, only adjust extra_loads_synth or extra_loads_test
-    extra_loads_synth = list() # leave empty ("list()") if you want to pick them randomly
-    # extra_loads_synth = [
-        # {'mass': 0.000 ,'position':np.array([ 0.000,  0.000, -0.000]), 'form':'ball', 'size':[0.0]},
-    #     {'mass': 0.0013,'position':np.array([-0.002,  0.001,  0.001]), 'form':'ball', 'size':[0.0]},
-    #     {'mass': 0.0013,'position':np.array([ 0.000, -0.004,  0.002]), 'form':'ball', 'size':[0.0]},
-    #     {'mass': 0.0007,'position':np.array([ 0.006, -0.001,  0.000]), 'form':'ball', 'size':[0.0]},
-    #     {'mass': 0.0018,'position':np.array([-0.001, -0.001, -0.001]), 'form':'ball', 'size':[0.0]},
-    # ]
+    # extra_loads_synth = list() # leave empty ("list()") if you want to pick them randomly
+    extra_loads_synth = [
+        {'mass': 0.000 ,'position':np.array([ 0.000,  0.000, -0.000]), 'form':'ball', 'size':[0.0]},
+        {'mass': 0.011,'position':np.array([0.000,  0.008,  0.001]), 'form':'ball', 'size':[0.0]},
+        {'mass': 0.013,'position':np.array([ 0.008, -0.004,  0.002]), 'form':'ball', 'size':[0.0]},
+        {'mass': 0.008,'position':np.array([ -0.006, 0.001,  0.000]), 'form':'ball', 'size':[0.0]},
+        {'mass': 0.010,'position':np.array([-0.003, -0.007, -0.001]), 'form':'ball', 'size':[0.0]},
+    ]
     extra_loads_test = list() # leave empty ("list()") if you want to pick them randomly
     mass_range = [0.007, 0.015]
     pos_size = [0.01, 0.01, 0.003]
 
-    N_synth = 10
+    N_synth = 1
     N_test = 15
     start = 0                              # time step to start sampling the trajectory with
     T = 500                               # number of samples per trajectory for controller synthesis
@@ -47,10 +47,10 @@ def get_settings():
     # noise
     m_w = n                 # number of disturbance variables w_k
     B_w = np.eye(n, m_w)
-    assumedBound = 0.001     # noise bound assumed for robust controller synthesis
+    assumedBound = 0.01     # noise bound assumed for robust controller synthesis
 
     # performance metric
-    Q = np.eye(n, n)*np.diag([1000,1000,0.001,0.001,1,1])
+    Q = np.eye(n, n)*np.diag([100,100,0.01,0.01,1,1])
     S = np.zeros((n, m))
     R = np.eye(m, m)*0
     C = np.array([[1,1,1,1,1,1]])
@@ -122,16 +122,16 @@ def get_settings():
         'gui':True,
         'pid_type':'mellinger',
         'control_freq_hz':500,
-        'simulated_delay_ms':50
+        'simulated_delay_ms':0
     }
 
     safe_state_lims = [
         [-100, 100],            #x
         [-100, 100],            #y
         [0.1, 2],               #z
-        [-2.5, 2.5],            #vx
-        [-2.5, 2.5],            #vy
-        [-2.5, 2.5],            #vz
+        [-1.5, 1.5],            #vx
+        [-1.5, 1.5],            #vy
+        [-0.5, 0.5],            #vz
         [-0.5, 0.5],            #roll
         [-0.5, 0.5],            #pitch
         [-0.1, 0.1],            #yaw
