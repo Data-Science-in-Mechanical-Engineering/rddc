@@ -130,8 +130,7 @@ def robust_lqr_scenario(trajectories, noiseInfo, perfInfo, verbosity=1):
     solution = None
     try:
         solver_verbosity = max(verbosity-1, 0)
-        problem.solve(verbosity=solver_verbosity)
-        solution = problem.solve(verbosity=verbosity)
+        solution = problem.solve(verbosity=solver_verbosity)
     except pc.modeling.problem.SolutionFailure:
         if verbosity>0:
             print("Solution Failure occured")
@@ -238,8 +237,7 @@ def regularized_lqr_scenario(trajectories, noiseInfo, perfInfo, reg_factor=1e-1,
     solution = None
     try:
         solver_verbosity = max(verbosity-1, 0)
-        problem.solve(verbosity=solver_verbosity)
-        solution = problem.solve(verbosity=verbosity)
+        solution = problem.solve(verbosity=solver_verbosity)
     except pc.modeling.problem.SolutionFailure:
         if verbosity>0:
             print("Solution Failure occured")
@@ -356,8 +354,7 @@ def robust_scenario(trajectories, noiseInfo, perfInfo, verbosity=1):
     solution = None
     try:
         solver_verbosity = max(verbosity-1, 0)
-        problem.solve(verbosity=solver_verbosity)
-        solution = problem.solve(verbosity=verbosity)
+        solution = problem.solve(verbosity=solver_verbosity)
     except pc.modeling.problem.SolutionFailure:
         if verbosity>0:
             print("Solution Failure occured")
@@ -441,8 +438,8 @@ def robust_stabilization_scenario_slemma(trajectories, noiseInfo, perfInfo, verb
     v_b = pc.RealVariable('b')
 
     # problem.set_objective(None)
-    # problem.set_objective('min', pc.trace(v_P))
-    problem.set_objective('min', v_a)
+    problem.set_objective('min', pc.trace(v_P))
+    problem.options['dualize'] = True
 
     # problem.add_constraint(v_P >> 1e-4)
     problem.add_constraint(v_P >> 1)
@@ -509,8 +506,7 @@ def robust_stabilization_scenario_slemma(trajectories, noiseInfo, perfInfo, verb
     solution = None
     try:
         solver_verbosity = max(verbosity-1, 0)
-        problem.solve(verbosity=solver_verbosity)
-        solution = problem.solve(verbosity=verbosity)
+        solution = problem.solve(verbosity=solver_verbosity)
     except pc.modeling.problem.SolutionFailure:
         if verbosity>0:
             print("Solution Failure occured")
@@ -681,8 +677,7 @@ def robust_lqr_scenario_slemma(trajectories, noiseInfo, perfInfo, verbosity=1):
     solution = None
     try:
         solver_verbosity = max(verbosity-1, 0)
-        problem.solve(verbosity=solver_verbosity)
-        solution = problem.solve(verbosity=verbosity)
+        solution = problem.solve(verbosity=solver_verbosity)
     except pc.modeling.problem.SolutionFailure:
         if verbosity>0:
             print("Solution Failure occured")
@@ -780,6 +775,7 @@ def robust_h2_scenario_slemma(trajectories, noiseInfo, perfInfo, verbosity=1):
     problem.add_constraint(v_gamma_sqr > 1)
 
     problem.set_objective('min', v_gamma_sqr)
+    # problem.options['dualize'] = True
 
     problem.add_constraint(v_Y >> 0)
     problem.add_constraint(v_a >= 0)
@@ -868,8 +864,7 @@ def robust_h2_scenario_slemma(trajectories, noiseInfo, perfInfo, verbosity=1):
     solution = None
     try:
         solver_verbosity = max(verbosity-1, 0)
-        problem.solve(verbosity=solver_verbosity)
-        solution = problem.solve(verbosity=verbosity)
+        solution = problem.solve(verbosity=solver_verbosity)
     except pc.modeling.problem.SolutionFailure:
         if verbosity>0:
             print("Solution Failure occured")
@@ -967,6 +962,7 @@ def robust_hinf_scenario_slemma(trajectories, noiseInfo, perfInfo, verbosity=1):
     v_gamma_invsqr = pc.RealVariable('1/γ²')
 
     problem.set_objective('max', v_gamma_invsqr)
+    # problem.options['dualize'] = True
 
     problem.add_constraint(v_Y >> 0)
     problem.add_constraint(v_a >= 0)
@@ -1050,8 +1046,7 @@ def robust_hinf_scenario_slemma(trajectories, noiseInfo, perfInfo, verbosity=1):
     solution = None
     try:
         solver_verbosity = max(verbosity-1, 0)
-        problem.solve(verbosity=solver_verbosity)
-        solution = problem.solve(verbosity=verbosity)
+        solution = problem.solve(verbosity=solver_verbosity)
     except pc.modeling.problem.SolutionFailure:
         if verbosity>0:
             print("Solution Failure occured")
@@ -1088,8 +1083,8 @@ def robust_hinf_scenario_slemma(trajectories, noiseInfo, perfInfo, verbosity=1):
             gamma_invsqr = v_gamma_invsqr.value
             gamma_sqr = 1/v_gamma_invsqr.value
             print(' L: {0}\n Y: {1}\n a: {2}\n b: {3}\n γ²: {4}\n 1/γ²: {5}\n'.format(np.array_str(L, precision=3), np.array_str(Y, precision=3), a, b, gamma_sqr, gamma_invsqr))
-            print('\nOptimal controller is found: \n{}\n'.format(K))
-            print(' L: {0}\n Y: {1}\n b: {2}\n γ²: {3}\n'.format(np.array_str(L, precision=3), np.array_str(Y, precision=3), b, gamma_sqr))
-            print('a: {0}'.format([v.value for v in v_a]))
+            # print('\nOptimal controller is found: \n{}\n'.format(K))
+            # print(' L: {0}\n Y: {1}\n b: {2}\n γ²: {3}\n'.format(np.array_str(L, precision=3), np.array_str(Y, precision=3), b, gamma_sqr))
+            # print('a: {0}'.format([v.value for v in v_a]))
 
     return K
