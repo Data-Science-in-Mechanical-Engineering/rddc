@@ -4,7 +4,7 @@ import os
 def get_settings():
     name = 'simulation'
     suffix = 'like_experiment'
-    seed = 642
+    seed = 1
     eps = 1e-8
     controllability_tol = 1e-3
     state_idx = [0,1,3,4,6,7]
@@ -26,19 +26,19 @@ def get_settings():
 
     # Extra weight distribution
     extra_loads = list() # do not touch this one, only adjust extra_loads_synth or extra_loads_test
-    # extra_loads_synth = list() # leave empty ("list()") if you want to pick them randomly
-    extra_loads_synth = [
-        {'mass': 0.000 ,'position':np.array([ 0.000,  0.000, -0.000]), 'form':'ball', 'size':[0.0]},
-        {'mass': 0.011,'position':np.array([0.000,  0.008,  0.001]), 'form':'ball', 'size':[0.0]},
-        {'mass': 0.013,'position':np.array([ 0.008, -0.004,  0.002]), 'form':'ball', 'size':[0.0]},
-        {'mass': 0.008,'position':np.array([ -0.006, 0.001,  0.000]), 'form':'ball', 'size':[0.0]},
-        {'mass': 0.010,'position':np.array([-0.003, -0.007, -0.001]), 'form':'ball', 'size':[0.0]},
-    ]
+    extra_loads_synth = list() # leave empty ("list()") if you want to pick them randomly
+    # extra_loads_synth = [
+    #     {'mass': 0.000 ,'position':np.array([ 0.000,  0.000, -0.000]), 'form':'ball', 'size':[0.0]},
+    #     {'mass': 0.011,'position':np.array([0.000,  0.008,  0.001]), 'form':'ball', 'size':[0.0]},
+    #     {'mass': 0.013,'position':np.array([ 0.008, -0.004,  0.002]), 'form':'ball', 'size':[0.0]},
+    #     {'mass': 0.008,'position':np.array([ -0.006, 0.001,  0.000]), 'form':'ball', 'size':[0.0]},
+    #     {'mass': 0.010,'position':np.array([-0.003, -0.007, -0.001]), 'form':'ball', 'size':[0.0]},
+    # ]
     extra_loads_test = list() # leave empty ("list()") if you want to pick them randomly
-    mass_range = [0.007, 0.015]
-    pos_size = [0.01, 0.01, 0.003]
+    mass_range = [0.007, 0.012]
+    pos_size = [0.008, 0.008, 0.003]
 
-    N_synth = 1
+    N_synth = 15
     N_test = 15
     start = 0                              # time step to start sampling the trajectory with
     T = 500                               # number of samples per trajectory for controller synthesis
@@ -50,7 +50,7 @@ def get_settings():
     assumedBound = 0.001     # noise bound assumed for robust controller synthesis
 
     # performance metric
-    Q = np.eye(n, n)*np.diag([100,100,0.01,0.01,1,1])
+    Q = np.eye(n, n)*np.diag([0.01,0.01,0.01,0.01,0.01,0.01])
     S = np.zeros((n, m))
     R = np.eye(m, m)*0
     C = np.array([[1,1,1,1,1,1]])
@@ -58,9 +58,24 @@ def get_settings():
 
     vicon_freq = 300
     vicon_error_x = 1e-4
-    vicon_error_v = vicon_error_x * vicon_freq * 2
+    vicon_error_v = vicon_error_x * vicon_freq * 2 /10
     vicon_error_rpy = np.radians(0.1)
     vicon_error_rpy_rate = vicon_error_rpy * vicon_freq * 2
+
+    post_meas_noise = [
+        vicon_error_x*0,
+        vicon_error_x*0,
+        vicon_error_x*0,
+        vicon_error_v*0,
+        vicon_error_v*0,
+        vicon_error_v*0,
+        vicon_error_rpy,
+        vicon_error_rpy,
+        vicon_error_rpy,
+        vicon_error_rpy_rate*0,
+        vicon_error_rpy_rate*0,
+        vicon_error_rpy_rate*0,
+    ]
 
     trainSettings = {
         'num_drones':N_synth,
@@ -68,19 +83,19 @@ def get_settings():
         'sfb_freq_hz':20,
         'num_samples':T,
         'ctrl_noise':1.0,
-        'proc_noise':0.0001,
-        # 'meas_noise_vicon':[vicon_error_x,
-        #                     vicon_error_x,
-        #                     vicon_error_x,
-        #                     vicon_error_v,
-        #                     vicon_error_v,
-        #                     vicon_error_v,
-        #                     vicon_error_rpy,
-        #                     vicon_error_rpy,
-        #                     vicon_error_rpy,
-        #                     vicon_error_rpy_rate,
-        #                     vicon_error_rpy_rate,
-        #                     vicon_error_rpy_rate,],
+        'proc_noise':0.00001,
+        'meas_noise_vicon':[vicon_error_x,
+                            vicon_error_x,
+                            vicon_error_x,
+                            vicon_error_v,
+                            vicon_error_v,
+                            vicon_error_v,
+                            vicon_error_rpy,
+                            vicon_error_rpy,
+                            vicon_error_rpy,
+                            vicon_error_rpy_rate,
+                            vicon_error_rpy_rate,
+                            vicon_error_rpy_rate,],
         'traj':'hover',
         'part_pid_off':True,
         'traj_filename':None,

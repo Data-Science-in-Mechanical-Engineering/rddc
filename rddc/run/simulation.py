@@ -47,6 +47,14 @@ def get_trajectories(settings, paths):
 
     return trajectories
 
+def apply_measurement_noise(settings, trajectory):
+    T = trajectory['X0'].shape[1]
+    n = len(settings['state_idx'])
+    meas_noise = np.array([x for idx, x in enumerate(settings['post_meas_noise']) if idx in settings['state_idx']])
+    for i in range(T):
+        trajectory['X0'][:,i] += (2*np.random.random(n)-1)*meas_noise
+        trajectory['X1'][:,i] += (2*np.random.random(n)-1)*meas_noise
+
 def concatenate_trajectories_as_one(trajectories):
     """
     this trajectory is in format suitable for training the controller:
@@ -384,6 +392,11 @@ def run_modular(settings_base):
             else:
                 paths = [get_simulation_trajectory_path(settings, 'train', controller_suffix)+'.npy']
         trajectories4synth = get_trajectories(settings, paths)
+        if 'post_meas_noise' in settings_base.keys():
+            for trajectory in trajectories4synth:
+                print(f"before:\n {trajectory['X0'][:,:5]}")
+                apply_measurement_noise(settings_base, trajectory)
+                print(f"after:\n {trajectory['X0'][:,:5]}")
         # check_trajectories(settings, trajectories4synth, test_type='willems')
         if len(ARGS.K)>0:
             which_controllers = ARGS.K
