@@ -394,9 +394,9 @@ def run_modular(settings_base):
         trajectories4synth = get_trajectories(settings, paths)
         if 'post_meas_noise' in settings_base.keys():
             for trajectory in trajectories4synth:
-                print(f"before:\n {trajectory['X0'][:,:5]}")
+                # print(f"before:\n {trajectory['X0'][:,:5]}")
                 apply_measurement_noise(settings_base, trajectory)
-                print(f"after:\n {trajectory['X0'][:,:5]}")
+                # print(f"after:\n {trajectory['X0'][:,:5]}")
         # check_trajectories(settings, trajectories4synth, test_type='willems')
         if len(ARGS.K)>0:
             which_controllers = ARGS.K
