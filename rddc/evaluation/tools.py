@@ -201,6 +201,16 @@ def lighten_color(color, amount=0.5):
     return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
 
 
+def get_absolute_trajectory_experiment(path):
+    abs_trajectory = np.load(os.path.join(path,'absolute_trajectory.npy'), allow_pickle=True).item()
+    return abs_trajectory
+
+
+def get_reference_experiment(path):
+    ref_trajectory = np.load(os.path.join(path,'reference_trajectory.npy'), allow_pickle=True)
+    return ref_trajectory
+
+
 if __name__=="__main__":
     import rddc.run.settings.dean_1d_test as module
     settings = module.get_settings()
