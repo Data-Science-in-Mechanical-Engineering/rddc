@@ -25,6 +25,36 @@ from rddc.tools.files import get_simulation_trajectory_path
 
 # def get_train_trajectory_filename(settings):
 #     return 'train_' + settings['trainSettings']['traj'] + '_seed' + str(settings['seed'])
+def print_ctrl_summary(K):
+    if K is None:
+        return
+    if isinstance(K, float):
+        return
+    string = "{0:5.2f}\t{1:5.2f}\t{2:5.2f}\t{3:5.2f}\t{4:5.2f}\t{5:5.2f}\t".format(
+        min(K[0,1], -K[1,0]),
+        max( abs(K[1,1]), abs(K[0,0])),
+        min(K[0,3], -K[1,2]),
+        max( abs(K[1,3]), abs(K[0,2])),
+        min(-K[0,4], -K[1,5]),
+        max( abs(K[1,4]), abs(K[0,5])),
+    )
+    print(string)
+
+
+def plot_extra_loads(settings):
+    xs = [1000*load['position'][0] for load in settings['extra_loads']]
+    ys = [1000*load['position'][1] for load in settings['extra_loads']]
+    # zs = [1000*load['position'][2] for load in settings['extra_loads']]
+    ms = [10000*load['mass'] for load in settings['extra_loads']]
+    dx =1000*np.max(settings['pos_size'])*1.1
+    # plt.plot([-dx, dx], [0,0], 'k-')
+    # plt.plot([0, 0], [-dx,dx], 'k-')
+    plt.axhline(0, color='black')
+    plt.axvline(0, color='black')
+    plt.scatter(xs, ys, ms)
+    plt.xlim((-dx, dx))
+    plt.ylim((-dx, dx))
+    plt.show()
 
 def get_trajectories(settings, paths):
     """
@@ -142,6 +172,7 @@ def synthesize_controller(settings, trajectories4synth, which_controllers):
         else:
             K_str = np.array_str(K, precision=3)
         print('\nOptimal RDDC controller: \n{}\n'.format(K_str))
+        print_ctrl_summary(K)
         files.save_dict_npy(os.path.join(path, 'controller_rddc.npy'), {'controller': K})
 
     if 'lslqr' in which_controllers:
@@ -158,6 +189,7 @@ def synthesize_controller(settings, trajectories4synth, which_controllers):
         else:
             K_str = np.array_str(K, precision=3)
         print('\nOptimal LS-LQR controller: \n{}\n'.format(K_str))
+        print_ctrl_summary(K)
         files.save_dict_npy(os.path.join(path, 'controller_lslqr.npy'), {'controller': K})
 
     if 'ceddc' in which_controllers:
@@ -175,6 +207,7 @@ def synthesize_controller(settings, trajectories4synth, which_controllers):
         else:
             K_str = np.array_str(K, precision=3)
         print('\nOptimal CE-DDC controller: \n{}\n'.format(K_str))
+        print_ctrl_summary(K)
         files.save_dict_npy(os.path.join(path, 'controller_ceddc.npy'), {'controller': K})
     
     if 'ddc' in which_controllers:
@@ -244,6 +277,7 @@ def training_parallel(settings_base):
         print(f"J calculated:\n {np.array_str(J, precision=6)}")
         extra_load.update({'J':J})
         settings['extra_loads'].append(extra_load)
+    plot_extra_loads(settings)
     fly.run(settings, settings['trainSettings'])
 
 def training_serial(settings_base):
