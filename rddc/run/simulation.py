@@ -42,16 +42,16 @@ def print_ctrl_summary(K):
 
 
 def plot_extra_loads(settings):
-    xs = [1000*load['position'][0] for load in settings['extra_loads']]
-    ys = [1000*load['position'][1] for load in settings['extra_loads']]
-    # zs = [1000*load['position'][2] for load in settings['extra_loads']]
-    ms = [10000*load['mass'] for load in settings['extra_loads']]
+    xs = np.array([1000*load['position'][0] for load in settings['extra_loads']])
+    ys = np.array([1000*load['position'][1] for load in settings['extra_loads']])
+    # zs = np.array([1000*load['position'][2] for load in settings['extra_loads']])
+    ms = np.array([10000*load['mass'] for load in settings['extra_loads']])
     dx =1000*np.max(settings['pos_size'])*1.1
     # plt.plot([-dx, dx], [0,0], 'k-')
     # plt.plot([0, 0], [-dx,dx], 'k-')
     plt.axhline(0, color='black')
     plt.axvline(0, color='black')
-    plt.scatter(xs, ys, ms)
+    plt.scatter(xs, ys, (10+ms-np.min(ms)))
     plt.xlim((-dx, dx))
     plt.ylim((-dx, dx))
     plt.show()
@@ -200,6 +200,10 @@ def synthesize_controller(settings, trajectories4synth, which_controllers):
             perfInfo        = settings,
             verbosity       = settings['output_verbosity']
         )
+        # K = np.array([
+        #     [0,   15,    0, 8,    -12, 7],
+        #     [-15, 0,    -8, 0,     7, -12]
+        # ])
         if K is None:
             K_str = None
         elif isinstance(K, float):
