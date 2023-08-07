@@ -1,15 +1,20 @@
-import numpy as np
-import argparse
-import importlib
+
 import matplotlib as mpl
 # Use the pgf backend (must be set before pyplot imported)
 mpl.use('pgf')
+import numpy as np
+import argparse
+import importlib
+import os
 import rddc.evaluation.tools as evaltools
 c, params = evaltools.get_colors_and_plot_params('CDC_paper')  # specify font size etc.,
 mpl.rcParams.update(params)
 
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
+from matplotlib.patches import Circle
+from mpl_toolkits.axes_grid1.anchored_artists import AnchoredDrawingArea
+from matplotlib.offsetbox import AnchoredText
 import pandas as pd
 import seaborn as sns
 # import rddc.run.settings.dean_settings_var_sigma_N as module #for production
@@ -42,6 +47,7 @@ cmap = ListedColormap(sns.color_palette("RdYlGn", n_colors=10)) #divergent, intu
 # ])
 norm = colors.Normalize(vmin=0, vmax=100)
 # sns.set_theme()
+basepath = '.'
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Heatmap plot for different testcases')
@@ -80,7 +86,7 @@ arrays, var, nonnans = evaltools.get_scalars(
 # var = {'N_synth':[int(x) for x in np.ceil(np.logspace(0, np.log(300) / np.log(10), 10))],
 #         'sigma':[x for x in np.logspace(-3/2, 0, 14)]}
 # arrays = {'N_stable':np.random.randint(0, 1000, (10,14)), 'N_test':np.ones((10,14))*1000}
-# nonnans = {'N_stable': np.random.randint(0, 3, (10,14))}
+# nonnans = {'N_stable': np.random.randint(0, 5, (10,14))}
 
 ## POSTPROCESSING AND CREATING A DATA FRAME
 num_Nsynths = len(var['N_synth'])
@@ -126,7 +132,45 @@ sns.scatterplot(
 # ax.axis([N_synths.min(), N_synths.max(), sigmas.min(), sigmas.max()])
 cbar = fig.colorbar(ScalarMappable(norm=norm, cmap=cmap), ax=ax, drawedges=False,
                     location='top',
-                    label='Percentage of stable systems')
+                    anchor = (1.0, 0.0),
+                    shrink = 0.67,
+                    ticks = [0, 20, 40, 60, 80, 100],
+                    label='% stable systems')
+
+#### Second legend: circle sizes #####
+max_circle_size_legend = 5.2
+ada = AnchoredDrawingArea(  90, 35, 0, 0,
+                            loc=('upper left'), frameon=False,
+                            bbox_to_anchor=(-0.25, 1.35),
+                            bbox_transform=ax.transAxes)
+ada.drawing_area.add_artist(Circle((10, 5), max_circle_size_legend, fc="k"))
+ada.drawing_area.add_artist(Circle((30, 5), max_circle_size_legend/np.sqrt(3), fc="k"))
+ada.drawing_area.add_artist(Circle((50, 5), max_circle_size_legend/np.sqrt(10), fc="k"))
+ax.set_ylim()
+ax.scatter([2.25], [1.7], marker="x", color="black", s=20, linewidth=1, clip_on=False)
+ax.add_artist(ada)
+ax.add_artist(AnchoredText("100",
+                    loc='upper left', frameon=False,
+                    bbox_to_anchor=(-0.24, 1.2465),
+                    bbox_transform=ax.transAxes))
+ax.add_artist(AnchoredText("50",
+                    loc='upper left', frameon=False,
+                    bbox_to_anchor=(-0.12, 1.2465),
+                    bbox_transform=ax.transAxes))
+ax.add_artist(AnchoredText("2",
+                    loc='upper left', frameon=False,
+                    bbox_to_anchor=(0.0, 1.2465),
+                    bbox_transform=ax.transAxes))
+ax.add_artist(AnchoredText("0",
+                    loc='upper left', frameon=False,
+                    bbox_to_anchor=(0.12, 1.2465),
+                    bbox_transform=ax.transAxes))
+
+ax.add_artist(AnchoredText("% informative data",
+                    loc='upper left', frameon=False,
+                    bbox_to_anchor=(-0.25, 1.325),
+                    bbox_transform=ax.transAxes))
+
 ax.set_xlabel(r'Number of observed systems $N$')
 ax.set_ylabel(r'Indicator for variation size  $\sigma^2$')
 ax.set_xticks(var['N_synth'], labels=[str(i) for i in var['N_synth']], minor=False) #
@@ -143,7 +187,9 @@ ax.grid(True, linestyle=':', linewidth=0.5, zorder=1, which='major')
 
 # plt.show()
 
-plt.savefig('figures/heatmap_sigma_N.pgf', format='pgf')
-plt.savefig('figures/heatmap_sigma_N.pdf', format='pdf', dpi=300)
+plt.savefig(os.path.join(basepath, 'figures','heatmap_sigma_N.pdf'))
+plt.savefig(os.path.join(basepath, 'figures','heatmap_sigma_N.pgf'), format='pgf', dpi=300)
+# plt.savefig('figures/heatmap_sigma_N.pgf', format='pgf')
+# plt.savefig('figures/heatmap_sigma_N.pdf', format='pdf', dpi=300)
 
 plt.close()
