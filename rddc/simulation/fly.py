@@ -78,6 +78,21 @@ def enable_pid(ARGS, ctrl):
             d_coeff_att = np.array([20000., 20000., 12000.])      # rr, pr, yr
         )
 
+def enable_pid_noxy(ARGS, ctrl):
+    """
+    original PID coefficients
+    """
+    for i in range(ARGS.num_drones):
+        ctrl[i].setPIDCoefficients(
+            p_coeff_pos = np.array([.4, .4, 1.25])              * np.array([0., 0, 1]), # x, y, z
+            i_coeff_pos = np.array([.05, .05, .05])             * np.array([0, 0, 1]), # x, y,  z integrated
+            d_coeff_pos = np.array([.2, .2, .4])                * np.array([0, 0, 1]), # vx, vy, vz
+            p_coeff_att = np.array([70000., 70000., 60000.])    * np.array([1, 1, 1]), # r, p, y
+            i_coeff_att = np.array([.0, .0, 500.])              * np.array([1, 1, 1]), # r, p, y integrated
+            d_coeff_att = np.array([20000., 20000., 12000.])    * np.array([1, 1, 1])  # rr, pr, yr
+        )
+
+
 def get_gerono_lemniscate_point_at_phase(R, H, phi):
     return [
         R   * np.cos(phi),
@@ -121,7 +136,7 @@ def get_init_xyzs(rnd, ARGS, R, H):
             get_circle_point_at_phase(R, H, init_phi)
             for _ in range(num_drones)
         ])
-    elif ARGS.traj in ['hover', 'line', 'linex']:
+    elif ARGS.traj in ['hover', 'line', 'linex', 'line30']:
         INIT_XYZS = np.array([
             [0.,0.,H] + (2*rnd.random(3)-1)*np.array([1,1,0])*spread #don't randomize z since we're not interested in it
             for _ in range(num_drones)
@@ -180,7 +195,8 @@ def parse_arguments(override_args=None, ignore_cli=False):
     parser.add_argument('--proc_noise',         default=0.0,        type=float,         help='Process noise', metavar='')
     parser.add_argument('--meas_noise',         default=[],         type=list,          help="Measurement noise from craziflie's internal state observation", metavar='')
     parser.add_argument('--meas_noise_vicon',   default=[],         type=list,          help='Measurement noise from vicon system', metavar='')
-    parser.add_argument('--traj',               default="hover",    type=str,           help='Trajectory to fly', metavar='', choices=['8', 'hover', 'circle', 'linex', 'line'])
+    parser.add_argument('--traj',               default="hover",    type=str,           help='Trajectory to fly', metavar='', choices=['8', 'hover', 'circle', 'linex', 'line', 'line30'])
+    parser.add_argument('--record_reference',   default=False,      type=str2bool,      help='Record reference trajectory or not. High RAM consumption', metavar='')
     parser.add_argument('--calc_cost',          default=False,      type=str2bool,      help='Whether to calculate and save LQR cost', metavar='')
     parser.add_argument('--part_pid_off',       default=True,       type=str2bool,      help='Tell PID to not control some states', metavar='')
     parser.add_argument('--traj_filename',      default=None,       type=str,           help='Filename to save the resulting trajectory in', metavar='')
@@ -257,7 +273,7 @@ def find_unsafe_states(states, settings):
 
 
 def run(settings, override_args=None):
-    
+
     ignore_cli = override_args is not None
 
     ARGS = parse_arguments(override_args, ignore_cli)
@@ -326,6 +342,28 @@ def run(settings, override_args=None):
                 TARGET_VEL[i, :, drone] =  v_max/np.sqrt(2),\
                                     v_max/np.sqrt(2),\
                                     0.0
+    elif ARGS.traj in ['line30']:
+        dist = 8 * R / np.cos(np.radians(30))
+        v_max = dist/PERIOD * 1.1
+        t_acc = PERIOD - dist/v_max
+        i_acc = int(t_acc * ARGS.control_freq_hz)
+        for drone in range(ARGS.num_drones):
+            for i in range(NUM_WP):
+                TARGET_POS[i, :, drone] =  dist*np.cos(np.radians(30)) * (i / NUM_WP) + INIT_XYZS[drone, 0], \
+                                    dist*np.sin(np.radians(30))* (i / NUM_WP) + INIT_XYZS[drone, 1], \
+                                    INIT_XYZS[drone, 2]
+            if i < i_acc:
+                TARGET_VEL[i, :, drone] =  v_max*np.cos(np.radians(30)) * (i/i_acc), \
+                                    v_max*np.sin(np.radians(30)) * (i/i_acc), \
+                                    0.0
+            elif i > (NUM_WP-i_acc-1):
+                TARGET_VEL[i, :, drone] =  v_max*np.cos(np.radians(30)) * ((NUM_WP - i-1)/i_acc), \
+                                    v_max*np.sin(np.radians(30)) * ((NUM_WP - i-1)/i_acc), \
+                                    0.0
+            else:
+                TARGET_VEL[i, :, drone] =  v_max*np.cos(np.radians(30)),\
+                                    v_max*np.sin(np.radians(30)),\
+                                    0.0
     else:
         print("Error: specified an unknown trajectory")
         raise NotImplementedError
@@ -390,7 +428,8 @@ def run(settings, override_args=None):
     datapath = os.path.join('data', settings['name'], settings['suffix'])
     if not os.path.exists(datapath):
         os.makedirs(datapath)
-    logger = Logger(logging_freq_hz=int(ARGS.simulation_freq_hz/AGGR_PHY_STEPS),
+    if ARGS.plot:
+        logger = Logger(logging_freq_hz=int(ARGS.simulation_freq_hz/AGGR_PHY_STEPS),
                     num_drones=ARGS.num_drones,
                     output_folder=datapath
                     )
@@ -446,12 +485,13 @@ def run(settings, override_args=None):
                         'X1':np.zeros((12,TRAJ_LENGTH))
                     }   for _ in range(ARGS.num_drones)]
     
-    reference = {   'timestamps': [list() for j in range(ARGS.num_drones)],
-                    'cur_states': [list() for j in range(ARGS.num_drones)],
-                    'targets': [list() for j in range(ARGS.num_drones)],
-                    'orig_targets': [list() for j in range(ARGS.num_drones)],
-                    'frequency': int(ARGS.simulation_freq_hz/AGGR_PHY_STEPS/CTRL_EVERY_N_STEPS)
-    }
+    if ARGS.record_reference:
+        reference = {   'timestamps': [list() for j in range(ARGS.num_drones)],
+                        'cur_states': [list() for j in range(ARGS.num_drones)],
+                        'targets': [list() for j in range(ARGS.num_drones)],
+                        'orig_targets': [list() for j in range(ARGS.num_drones)],
+                        'frequency': int(ARGS.simulation_freq_hz/AGGR_PHY_STEPS/CTRL_EVERY_N_STEPS)
+        }
 
     # For drawing the drone's trajectory
     drone_ids = env.getDroneIds()
@@ -473,19 +513,26 @@ def run(settings, override_args=None):
     iLastReset = 0
     # for i in range(0, int(ARGS.duration_sec*env.SIM_FREQ), AGGR_PHY_STEPS):
     # waitWithSampling = settings['start']
-    waitForSfb = 0.01
+    waitForSfb = settings['start']
     obs, reward, done, info = env.step(action)
     lastObs = obs
     while True:
 
-        if abs(ARGS.wind_force) > 0:
-            if i/env.SIM_FREQ > 1.5:
-                env.WIND_FORCE = np.array([-1., 1., 0.]) * ARGS.wind_force
+        if ARGS.wind_force is not None:
             if i/env.SIM_FREQ > 2.0:
+                if isinstance(ARGS.wind_force, float):
+                    env.WIND_FORCE = np.array([-1., 1., 0.]) * ARGS.wind_force
+                else:
+                    env.WIND_FORCE = ARGS.wind_force
+            if i/env.SIM_FREQ > 2.1:
                 env.WIND_FORCE = [0., 0., 0.]
 
         if (not sfb_on) and waitForSfb*env.SIM_FREQ<(i-iLastReset):
             sfb_on = True
+            if ARGS.traj in ['hover']:
+                TARGET_POS = np.zeros((NUM_WP, 3, ARGS.num_drones))
+                TARGET_POS[:, 2, :] = H
+                TARGET_POS_COR = TARGET_POS.copy()
 
         if sfb_on and ARGS.part_pid_off:
             partially_disable_pid(ARGS, ctrl)
@@ -519,6 +566,12 @@ def run(settings, override_args=None):
                 obs, reward, done, info = env.step(action)
                 lastObs = obs
                 enable_pid(ARGS, ctrl)
+                if ARGS.traj in ['hover']:
+                    for drone in range(ARGS.num_drones):
+                        for i in range(NUM_WP):
+                            TARGET_POS[i, :, drone] =  env.INIT_XYZS[drone, 0], \
+                                                env.INIT_XYZS[drone, 1], \
+                                                env.INIT_XYZS[drone, 2]
                 TARGET_POS_COR = TARGET_POS.copy()
                 TARGET_VEL_COR = TARGET_VEL.copy()
                 TARGET_RPY_COR = TARGET_RPY.copy()
@@ -571,7 +624,7 @@ def run(settings, override_args=None):
                 print(f"Finished sample #{traj_counters[j]}")
 
                 # check the state vector for signs of instability
-                d_state = np.concatenate([cur_pos, cur_vel, cur_rpy, cur_rpy_rate])
+                d_state = np.concatenate([d_pos, d_vel, d_rpy, d_rpy_rate])
                 if ARGS.cut_traj:
                     unsafe_states = find_unsafe_states(d_state, settings)
                     if len(unsafe_states)>0:
@@ -602,46 +655,48 @@ def run(settings, override_args=None):
 
             #### Save the previous waypoint and go to the next way point and loop #####################
             for j in range(ARGS.num_drones):
-                states = obs[str(j)]["state"]
-                cur_pos     = states[0:3]
-                cur_rpy     = states[7:10]
-                cur_vel     = states[10:13]
-                # cur_rpy_rate= states[13:16]
-                if 'lastObs' in locals():
-                    last_rpy = lastObs[str(j)]["state"][7:10]
-                else:
-                    last_rpy = cur_rpy
-                cur_rpy_rate= (cur_rpy - last_rpy)*env.SIM_FREQ
-                reference['timestamps'][j].append(i/env.SIM_FREQ)
-                reference['cur_states'][j].append(np.hstack([
-                    cur_pos,
-                    cur_vel,
-                    cur_rpy,
-                    cur_rpy_rate]))
-                reference['targets'][j].append(np.hstack([
-                    TARGET_POS_COR[wp_counters[j], :, j],
-                    TARGET_VEL_COR[wp_counters[j], :, j],
-                    TARGET_RPY_COR[wp_counters[j], :, j],
-                    TARGET_RPY_RATE_COR[wp_counters[j], :, j]]))
-                reference['orig_targets'][j].append(np.hstack([
-                    TARGET_POS[wp_counters[j], :, j],
-                    TARGET_VEL[wp_counters[j], :, j],
-                    TARGET_RPY[wp_counters[j], :, j],
-                    TARGET_RPY_RATE[wp_counters[j], :, j]]))
+                if ARGS.record_reference:
+                    # print("recording reference")
+                    states = obs[str(j)]["state"]
+                    cur_pos     = states[0:3]
+                    cur_rpy     = states[7:10]
+                    cur_vel     = states[10:13]
+                    # cur_rpy_rate= states[13:16]
+                    if 'lastObs' in locals():
+                        last_rpy = lastObs[str(j)]["state"][7:10]
+                    else:
+                        last_rpy = cur_rpy
+                    cur_rpy_rate= (cur_rpy - last_rpy)*env.SIM_FREQ
+                    reference['timestamps'][j].append(i/env.SIM_FREQ)
+                    reference['cur_states'][j].append(np.hstack([
+                        cur_pos,
+                        cur_vel,
+                        cur_rpy,
+                        cur_rpy_rate]))
+                    reference['targets'][j].append(np.hstack([
+                        TARGET_POS_COR[wp_counters[j], :, j],
+                        TARGET_VEL_COR[wp_counters[j], :, j],
+                        TARGET_RPY_COR[wp_counters[j], :, j],
+                        TARGET_RPY_RATE_COR[wp_counters[j], :, j]]))
+                    reference['orig_targets'][j].append(np.hstack([
+                        TARGET_POS[wp_counters[j], :, j],
+                        TARGET_VEL[wp_counters[j], :, j],
+                        TARGET_RPY[wp_counters[j], :, j],
+                        TARGET_RPY_RATE[wp_counters[j], :, j]]))
                 if sfb_on:
                     if ARGS.wrap_wp:
                         wp_counters[j] = wp_counters[j] + 1 if wp_counters[j] < (NUM_WP-1) else 0
                     else:
                         wp_counters[j] = wp_counters[j] + 1 if wp_counters[j] < (NUM_WP-1) else NUM_WP-1
 
-
-            for j in range(ARGS.num_drones):
-                logger.log(drone=j,
-                    timestamp=i/env.SIM_FREQ,
-                    state= obs[str(j)]["state"],
-                    #control=np.hstack([TARGET_POS[wp_counters[j], 0:2], INIT_XYZS[j, 2], INIT_RPYS[j, :], np.zeros(6)])
-                    control=np.hstack([TARGET_POS[wp_counters[j], :, j], INIT_RPYS[j, :], np.zeros(6)])
-                    )
+            if ARGS.plot:
+                for j in range(ARGS.num_drones):
+                    logger.log(drone=j,
+                        timestamp=i/env.SIM_FREQ,
+                        state= obs[str(j)]["state"],
+                        #control=np.hstack([TARGET_POS[wp_counters[j], 0:2], INIT_XYZS[j, 2], INIT_RPYS[j, :], np.zeros(6)])
+                        control=np.hstack([TARGET_POS[wp_counters[j], :, j], INIT_RPYS[j, :], np.zeros(6)])
+                        )
 
         # Draw the drone trajectories
         if i%(CTRL_EVERY_N_STEPS*10) == 0 and ARGS.draw_trajectory and i>skip_steps_before_drawing :
@@ -703,17 +758,17 @@ def run(settings, override_args=None):
 
     #### Save the simulation results ###########################
 
-    if ARGS.calc_cost:
-        from rddc.tools.testing import lqr_cost_trajectories
+    # if ARGS.calc_cost:
+    #     from rddc.tools.testing import lqr_cost_trajectories
 
-        costs = np.zeros(ARGS.num_drones)
-        for j in range(ARGS.num_drones):
-            trajectory = {'state':None, 'input':None}
-            trajectory['state'] = trajectories[j]['state'][state_idx, :]
-            trajectory['input'] = trajectories[j]['input'][input_idx, :]
-            costs[j], _ = lqr_cost_trajectories([trajectory], metric=settings)
-        print('Average LQR cost: {0:4.3g}'.format(np.mean(costs)))
-        files.save_dict_npy(os.path.join(logger.OUTPUT_FOLDER, "performance-"+datetime.now().strftime("%m.%d.%Y_%H.%M.%S")+".npy"), {'costs':costs})
+    #     costs = np.zeros(ARGS.num_drones)
+    #     for j in range(ARGS.num_drones):
+    #         trajectory = {'state':None, 'input':None}
+    #         trajectory['state'] = trajectories[j]['state'][state_idx, :]
+    #         trajectory['input'] = trajectories[j]['input'][input_idx, :]
+    #         costs[j], _ = lqr_cost_trajectories([trajectory], metric=settings)
+    #     print('Average LQR cost: {0:4.3g}'.format(np.mean(costs)))
+    #     files.save_dict_npy(os.path.join(logger.OUTPUT_FOLDER, "performance-"+datetime.now().strftime("%m.%d.%Y_%H.%M.%S")+".npy"), {'costs':costs})
 
     if ARGS.traj_filename is None:
         # traj_filename = "trajectory-sfb-rate-"+datetime.now().strftime("%m.%d.%Y_%H.%M.%S")
@@ -723,20 +778,21 @@ def run(settings, override_args=None):
         traj_filename = ARGS.traj_filename
     np.save(traj_filename+".npy", trajectories, allow_pickle=True)
 
-    reference['timestamps'] = np.array(reference['timestamps'])
-    # So far, all states in 'reference' have been recorded in a matrix with dim0=drone, dim1=time, dim2=state
-    # However, our usual format is dim1=state, dim2=time
-    # That's why we need transposition here.
-    reference['cur_states'] = np.transpose(np.array(reference['cur_states']), axes=(0,2,1))
-    reference['targets'] = np.transpose(np.array(reference['targets']), axes=(0,2,1))
-    reference['orig_targets'] = np.transpose(np.array(reference['orig_targets']), axes=(0,2,1))
-    ### Save the states and the reference trajectory
-    np.save(traj_filename+"_reference.npy", reference, allow_pickle=True)
+    if ARGS.record_reference:
+        reference['timestamps'] = np.array(reference['timestamps'])
+        # So far, all states in 'reference' have been recorded in a matrix with dim0=drone, dim1=time, dim2=state
+        # However, our usual format is dim1=state, dim2=time
+        # That's why we need transposition here.
+        reference['cur_states'] = np.transpose(np.array(reference['cur_states']), axes=(0,2,1))
+        reference['targets'] = np.transpose(np.array(reference['targets']), axes=(0,2,1))
+        reference['orig_targets'] = np.transpose(np.array(reference['orig_targets']), axes=(0,2,1))
+        ### Save the states and the reference trajectory
+        np.save(traj_filename+"_reference.npy", reference, allow_pickle=True)
 
-    #### Plot the simulation results ###########################
-    if ARGS.plot:
-        #logger.plot()
-        utils.plot_states_and_targets(logger, reference)
+        #### Plot the simulation results ###########################
+        if ARGS.plot:
+            #logger.plot()
+            utils.plot_states_and_targets(logger, reference)
 
 if __name__ == "__main__":
 
