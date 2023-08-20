@@ -7,16 +7,19 @@ c, params = evaltools.get_colors_and_plot_params('CDC_paper')  # specify font si
 mpl.rcParams.update(params)
 import matplotlib.pyplot as plt
 from rddc.run.simulation import get_reference, get_absolute_trajectories
-from rddc.run.settings.simulation import get_settings
+from rddc.run.settings.simulation_rddc import get_settings as get_settings_rddc
+from rddc.run.settings.simulation_ceddc import get_settings as get_settings_ceddc
 import json
 import os
 import rddc.evaluation.tools as evaltools
 import seaborn as sns
+from rddc.tools.files import get_simulation_trajectory_path
 
 basepath = '.'
 
 ## GET SETTINGS AND SET APPEARENCE
-settings = get_settings()
+settings_rddc = get_settings_rddc()
+settings_ceddc = get_settings_ceddc()
 with open(os.path.join('rddc','tools','RWTHcolors.json')) as json_file:
         RWTHcolors = json.load(json_file)
 colornames75 = ['blau75', 'gruen75', 'rot75', 'orange75', 'violett75']
@@ -25,22 +28,14 @@ colors75 = [evaltools.rgb01_to_hex(RWTHcolors[color]) for color in colornames75]
 colors25 = [evaltools.rgb01_to_hex(RWTHcolors[color]) for color in colornames25]
 grey = evaltools.rgb01_to_hex(RWTHcolors['schwarz50'])
 black = evaltools.rgb01_to_hex(RWTHcolors['schwarz100'])
-deep_sns_colors = [evaltools.rgb01_to_hex(color) for color in sns.color_palette("deep", n_colors=5)]
+deep_sns_colors = [evaltools.rgb01_to_hex(color) for color in sns.color_palette("deep", n_colors=10)]
 
 ## GET TRAJECTORY DATA
-seeds = [settings['seed']+i+settings['N_synth'] for i in range(settings['N_test'])]
-seeds = [605, 606, 607, 608, 609]
-rddc_paths = [  os.path.join('data', settings['name'], settings['suffix'], 
-    'test_' + settings['testSettings']['traj'] + '_direct' + '_seed' + str(seed) + '_reference.npy'
-    )
-    for seed in seeds]
-sysid_paths = [  os.path.join('data', settings['name'], settings['suffix'], 
-    'test_' + settings['testSettings']['traj'] + '_indirect' + '_seed' + str(seed) + '_reference.npy'
-    )
-    for seed in seeds]
-rddc_trajectories = get_absolute_trajectories(settings, rddc_paths)
-sysid_trajectories = get_absolute_trajectories(settings, sysid_paths)
-reference = get_reference(settings, rddc_paths[0])
+rddc_paths = [get_simulation_trajectory_path(settings_rddc, 'test', 'rddc', reference=True)+'.npy']
+ceddc_paths = [get_simulation_trajectory_path(settings_ceddc, 'test','ceddc', reference=True)+'.npy']
+rddc_trajectories = get_absolute_trajectories(settings_rddc, rddc_paths)
+sysid_trajectories = get_absolute_trajectories(settings_ceddc, ceddc_paths)
+reference = get_reference(settings_rddc, rddc_paths[0])
 
 (fig_width_in, fig_height_in) = evaltools.get_size(245, subplots=(1,1), fraction=1, ratio='golden')
 fig, ax = plt.subplots(figsize=(fig_width_in, fig_height_in*1.1))
@@ -61,9 +56,9 @@ ax.axis([-0.05, 1.6, -0.05, 1.6])
 ax.set_yticks([0.0, 0.5, 1.0, 1.5])
 ax.set_box_aspect(1)
 ax.grid(True, linewidth=0.5, zorder=1, linestyle=":")
-fig.legend([sysIdLine, rddcLine, refLine], ['LS-LQR', 'RDDC', 'Reference'], loc='outside right upper')
+fig.legend([sysIdLine, rddcLine, refLine], ['CEDDC', 'RDDC', 'Reference'], loc='outside right upper')
 
 fig.subplots_adjust(bottom=0.12, top=0.98, left=0.05, right=.7)
-plt.savefig(os.path.join(basepath, 'figures','rddc_vs_ls.pdf'))
-plt.savefig(os.path.join(basepath, 'figures','rddc_vs_ls.pgf'), format='pgf', dpi=300)
+plt.savefig(os.path.join(basepath, 'figures','rddc_vs_ceddc.pdf'))
+plt.savefig(os.path.join(basepath, 'figures','rddc_vs_ceddc.pgf'), format='pgf', dpi=300)
 plt.close()
