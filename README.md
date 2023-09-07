@@ -67,7 +67,7 @@ python -m rddc.evaluation.plot_sigma_regions
 This figure visualizes a comprehensive parameter study. Recreating the data and reproducing the plots might require significant amount of computational resources (~2000 core-hours).
 * Adjust the number of cores available for computation in `rddc/run/settings/dean_var_sigma_N.py`.
 * If desired, adjust the parameters to vary in the same file (function `get_variations()`).
-1. Simulate the paraneter study: (Skip this if data is already available and stored in `./data/dean_var_sigma_N`)
+1. Simulate the parameter study: (Skip this if data is already available and stored in `./data/dean_var_sigma_N`)
 ```
 python -m rddc.run.synthetic --testcase dean --mode var_sigma_N
 ```
@@ -84,7 +84,7 @@ python -m rddc.evaluation.heatmap_sigma_N
 This figure visualizes a comprehensive parameter study. Recreating the data and reproducing the plots might require significant amount of computational resources (~2000 core-hours).
 * Adjust the number of cores available for computation in `rddc/run/settings/dean_var_T_N.py`.
 * If desired, adjust the parameters to vary in the same file (function `get_variations()`).
-1. Simulate the paraneter study: (Skip this if data is already available and stored in `./data/dean_var_T_N`)
+1. Simulate the parameter study: (Skip this if data is already available and stored in `./data/dean_var_T_N`)
 ```
 python -m rddc.run.synthetic --testcase dean --mode var_T_N
 ```
