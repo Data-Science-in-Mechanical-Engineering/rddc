@@ -52,3 +52,19 @@ def save_dict_npy(path, dictionary, mode='wb'):
         os.makedirs(os.path.dirname(path))
     with open(path, mode) as file:
         np.save(file, dictionary, allow_pickle=True)
+
+def extract_controller(path, print_ctrl=True, print_summary=True):
+    from rddc.run.simulation import print_ctrl_summary
+    ctrl = np.load(path, allow_pickle=True)
+    K = ctrl.item()['controller']
+    if K is None:
+        K_str = None
+    elif isinstance(K, float):
+        K_str = 'nan'
+    else:
+        K_str = np.array_str(K, precision=3, suppress_small=True)
+        if print_ctrl:
+            print('\nController: \n{}\n'.format(K_str))
+        if print_summary:
+            print_ctrl_summary(K)
+    return K
