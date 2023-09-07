@@ -37,9 +37,9 @@ def J_from_extra_mass(m, pos, form, size):
         ])
 
     Jsteiner = m*np.array([
-        [y**2 + z**2,   x*y,            x*z         ],
-        [x*y,           x**2 + z**2,    z*y         ],
-        [x*z,           z*y,            x**2 + y**2 ]
+        [ y**2 + z**2,  -x*y,           -x*z         ],
+        [-x*y,           x**2 + z**2,   -z*y         ],
+        [-x*z,          -z*y,            x**2 + y**2 ]
     ])
 
     J = J0 + Jsteiner
