@@ -13,26 +13,24 @@ import argparse
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-def get_trajectories(settings, paths):
+def get_trajectories(settings, paths, ignore_first_point=False):
     trajectories = list()
     state_idx = settings['state_idx']
     n = len(state_idx)
     input_idx = settings['input_idx']
     m = len(input_idx)
     for path in paths:
-        # trajectories_origin = np.load(path, allow_pickle=True)
-        # trajectory = {
-        #     'U0': trajectories_origin[0]['U0'][input_idx, :],
-        #     'X0': trajectories_origin[0]['X0'][state_idx, :],
-        #     'X1': trajectories_origin[0]['X1'][state_idx, :],
-        #     'assumedBound':settings['assumedBound']
-        # }
-
         trajectories_origin = np.load(path, allow_pickle=True).item()
-        # num_breaks = sum([x is None for x in trajectories_origin['X1']])
-        # num_total = len(trajectories_origin['U0'])
-        # num_points = num_total - num_breaks
-        indices = [i for i, x in enumerate(trajectories_origin['X1']) if x is not None]
+        if ignore_first_point:
+            indices = []
+            for i in range(1,len(trajectories_origin['X1'])):
+                if trajectories_origin['X1'][i] is None:
+                    continue
+                if trajectories_origin['X1'][i-1] is None:
+                    continue
+                indices.append(i)
+        else:
+            indices = [i for i, x in enumerate(trajectories_origin['X1']) if x is not None]
         num_points = len(indices)
         trajectory = {'U0': np.zeros((m, num_points)), 'X0': np.zeros((n, num_points)), 'X1': np.zeros((n, num_points)), 'assumedBound':settings['assumedBound']}
         for idx in range(num_points):
@@ -45,6 +43,16 @@ def get_trajectories(settings, paths):
         trajectories.append(trajectory)
 
     return trajectories
+
+def perform_postprocessing(trajectories, rng : np.random.RandomState):
+    pp_trajectories = list()
+    for trajectory in trajectories:
+        pp_trajectory = trajectory.copy()
+        state_shift = (2*rng.random((6,1))-1) * np.array([[5,5,  5,5,  5,5]]).T
+        pp_trajectory['X0'] = trajectory['X0'] + state_shift
+        pp_trajectory['X1'] = trajectory['X1'] + state_shift
+        pp_trajectories.append(pp_trajectory)
+    return pp_trajectories
 
 def synthesize_controller(settings, trajectories4synth):
     path = os.path.join('data', 'experiment')
@@ -79,8 +87,11 @@ def synthesize_controller(settings, trajectories4synth):
 
 def run(settings):
 
+    rng = np.random.default_rng(settings['seed'])
     paths = [os.path.join('data', 'experiment', filename, 'trajectory.npy') for filename in settings['filenames']]
-    trajectories4synth = get_trajectories(settings, paths)
+    trajectories4synth = get_trajectories(settings, paths, ignore_first_point=False)
+    if settings['postprocessing']:
+        trajectories4synth = perform_postprocessing(trajectories4synth, rng)
     # check_trajectories(settings, trajectories4synth, test_type='willems')
     K = synthesize_controller(settings, trajectories4synth=trajectories4synth)
     # print('\nDDC controller: \n{}\n'.format(K))
@@ -90,6 +101,7 @@ if __name__=='__main__':
 
     #### Define and parse (optional) arguments for the script ##
     parser = argparse.ArgumentParser(description='Modular script to synthesize an RDDC controller from experiment data')
+    parser.add_argument('--pp', action='store_true', default=False, help='Perform postprocessing. Cut-off first point or two of each trajectory, and add shifts to position')
     if not 'filenames' in settings:
         settings.update({'filenames':[]})
         parser.add_argument('--filenames', nargs='+', default=[], help='Experiment file names. It has not been found in settings, so it must be specified at input', metavar='')
@@ -101,6 +113,7 @@ if __name__=='__main__':
         settings.update({'filenames':[]})
         ARGS.filenames.remove('only')
     settings['filenames'] = settings['filenames'] + ARGS.filenames
+    settings['postprocessing'] = ARGS.pp
     if len(settings['filenames'])==0:
         print("No training trajectories were given. Please specify the folder names in settings or/and in the input arguments")
 
