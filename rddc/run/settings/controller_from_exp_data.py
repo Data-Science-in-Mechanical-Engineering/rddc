@@ -12,7 +12,7 @@ def get_settings():
     m = len(input_idx)                   # number of control variables u_k
 
     check_slater = False
-    check_willems = False
+    check_willems = True
     # algorithm = 'robust_hinf_scenario_slemma'
     algorithm = 'robust_stabilization_scenario_slemma'
     # algorithm = 'robust_lqr_scenario_slemma'
@@ -38,23 +38,23 @@ def get_settings():
         # 'hover_300002_10Hz_1.0',
         ##### Second session #####
         'hover_000000_10Hz_1.0_',
-        # 'hover_000001_10Hz_0.9',
-        # 'hover_000020_10Hz_0.9',
-        # 'hover_000400_10Hz_1.0',
-        # 'hover_000512_10Hz_0.9_fewPoints',
-        # # 'hover_000512_10Hz_1.0_fewPoints',
-        # 'hover_012000_10Hz_0.9',
-        # # 'hover_020031_10Hz_1.0_fewPoints',
-        # 'hover_100003_10Hz_1.0',
-        # 'hover_101002_10Hz_0.9',
-        # # 'hover_101003_10Hz_0.9_fewPoints',
-        # 'hover_120000_10Hz_1.0',
-        # 'hover_120002_10Hz_0.9',
-        # 'hover_201011_10Hz_1.0',
-        # 'hover_220001_10Hz_1.0',
-        # # 'hover_220011_10Hz_1.0_fewPoints',
-        # 'hover_221000_10Hz_0.9',
-        # 'hover_300002_10Hz_0.9_fewPoints',
+        'hover_000001_10Hz_0.9',
+        'hover_000020_10Hz_0.9',
+        'hover_000400_10Hz_1.0',
+        'hover_000512_10Hz_0.9_fewPoints',
+        # 'hover_000512_10Hz_1.0_fewPoints',
+        'hover_012000_10Hz_0.9',
+        # 'hover_020031_10Hz_1.0_fewPoints',
+        'hover_100003_10Hz_1.0',
+        'hover_101002_10Hz_0.9',
+        # 'hover_101003_10Hz_0.9_fewPoints',
+        'hover_120000_10Hz_1.0',
+        'hover_120002_10Hz_0.9',
+        'hover_201011_10Hz_1.0',
+        'hover_220001_10Hz_1.0',
+        # 'hover_220011_10Hz_1.0_fewPoints',
+        'hover_221000_10Hz_0.9',
+        'hover_300002_10Hz_0.9_fewPoints',
         # ## 50Hz #####################
         # 'hover_000000_50Hz_1.5',
         # 'hover_000000_50Hz_2.5_vicon300Hz1sample',
@@ -63,11 +63,15 @@ def get_settings():
         # 'hover_000000_20Hz_0.5',
         # ## 5 Hz #####################
         # 'hover_000000_5Hz_1.0',
+        # ## dx 0.5 ###################
+        # 'hover_000000_10Hz_1.0_dx0.5',
+        # 'hover_100000_10Hz_1.0_dx0.5',
+        # 'hover_010000_10Hz_1.0_dx0.5',
     ]
 
     # N_synth = 10
     # N_test = 100
-    start = 0                              # time step to start sampling the trajectory with
+    # start = 0                              # time step to start sampling the trajectory with
 
     # noise
     m_w = n                 # number of disturbance variables w_k
