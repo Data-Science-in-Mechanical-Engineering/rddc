@@ -22,16 +22,16 @@ def get_trajectories(paths):
     return output_trajectories
 
 ctrl_configurations = {
-    'exp1'          : ['exp1_controller_rddc_nom',          10],
-    'exp2'          : ['exp2_controller_rddc_N14_T200+',    10],
-    's2r1'          : ['s2r1_controller_rddc',              10],
-    's2r4'          : ['s2r4_controller_rddc',              10],
-    's2r4_5deg'     : ['s2r4_controller_rddc_drpy5deg',     10],
-    's2r5_0.5deg'   : ['s2r5_controller_rddc_drpy0.5deg',   50],
+    'exp1'          : ['exp1_controller_rddc_nom',          10,     'exp_1'],
+    'exp2'          : ['exp2_controller_rddc_N14_T200+',    10,     'exp_N'],
+    's2r1'          : ['s2r1_controller_rddc',              10,     's2r_1'],
+    's2r4'          : ['s2r4_controller_rddc',              10,     's2r_N'],
+    's2r4_5deg'     : ['s2r4_controller_rddc_drpy5deg',     10,     's2r_N_n'],
+    's2r5_0.5deg'   : ['s2r5_controller_rddc_drpy0.5deg',   50,     's2r_hf_n'],
     # 's2r5'          : ['s2r5_controller_rddc',              50],
 }
-# weight_configuration = '220000'
-weight_configuration = '200020'
+weight_configuration = '220000'
+# weight_configuration = '200020'
 # weight_configuration = '000023'
 # weight_configuration = '020003'
 fan_configuration = 'x'
@@ -78,10 +78,12 @@ ref = np.load(ref_path, allow_pickle=True)
 
 (fig_width_in, fig_height_in) = evaltools.get_size(245, subplots=(1,1), fraction=1, ratio='golden')
 fig, ax = plt.subplots(figsize=(fig_width_in, fig_height_in*1.15))
+trajLines = list()
+trajNames = [ctrl[2] for ctrl in ctrl_configurations.values()]
 for trajId in range(len(trajectories)):
     x = trajectories[trajId][0,:]
     y = trajectories[trajId][1,:]
-    ax.plot(x,y,'-',linewidth=0.8, color=deep_sns_colors[trajId], zorder=2)
+    trajLines.append(ax.plot(x,y,'-',linewidth=0.8, color=deep_sns_colors[trajId], zorder=2)[0])
     if outcomes[trajId]:
         ax.scatter([x[-1]], [y[-1]], marker='.', s=5, linewidths=1)
     else:
@@ -97,7 +99,7 @@ ax.set_yticks([-1.0, 0.0, 1.0])
 ax.set(xlabel=('position x [m]'))
 ax.set(ylabel=('position y [m]'))
 ax.grid(True, linewidth=0.5, zorder=1, linestyle=":")
-# ax.legend([trajLine, refLine], ['RDDC', 'Reference'], loc='right')
+ax.legend(trajLines+[refLine], trajNames+['Reference'], loc='lower right')
 
 fig.subplots_adjust(bottom=0.2, top=0.98, left=0.15, right=.95)
 plt.savefig(os.path.join(basepath, 'figures', plot_file_name+'.pdf'))
