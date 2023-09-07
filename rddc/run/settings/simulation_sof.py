@@ -27,20 +27,20 @@ def get_settings():
     ## Extra load distribution
     extra_loads = list() # do not touch this one, only adjust extra_loads_synth or extra_loads_test
     extra_loads_synth = list() # leave empty ("list()") if you want to pick them randomly
-    extra_loads_synth = [
-        {'mass': 0.000 ,'position':np.array([ 0.000,  0.000,  0.000]), 'form':'ball', 'size':[0.0]},
+    # extra_loads_synth = [
+        # {'mass': 0.000 ,'position':np.array([ 0.000,  0.000,  0.000]), 'form':'ball', 'size':[0.0]},
     #     {'mass': 0.0013,'position':np.array([-0.002,  0.001,  0.001]), 'form':'ball', 'size':[0.0]},
     #     {'mass': 0.0013,'position':np.array([ 0.000, -0.004,  0.002]), 'form':'ball', 'size':[0.0]},
     #     {'mass': 0.0007,'position':np.array([ 0.006, -0.001,  0.000]), 'form':'ball', 'size':[0.0]},
     #     {'mass': 0.0018,'position':np.array([-0.001, -0.001, -0.001]), 'form':'ball', 'size':[0.0]},
-    ]
+    # ]
     extra_loads_test = list() # leave empty ("list()") if you want to pick them randomly
     mass_range = [0.007, 0.012]
     pos_size = [0.01, 0.01, 0.002]
     # displacement_planar = 0.01
     # displacement_vert = 0.0
 
-    N_synth = 1
+    N_synth = 15
     N_test = 100
     start = 0                              # time step to start sampling the trajectory with
     T = 300                                  # number of samples per trajectory for controller synthesis
@@ -79,7 +79,7 @@ def get_settings():
         'data',
         name,
         suffix,
-        'train_ceddc'
+        'train_sof',
     )
     testSettings = {
         'num_drones':N_test,
@@ -104,7 +104,7 @@ def get_settings():
         'data',
         name,
         suffix,
-        'test_ceddc',
+        'test_sof',
     )
 
     safe_state_lims = [

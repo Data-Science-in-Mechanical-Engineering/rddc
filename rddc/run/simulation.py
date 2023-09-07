@@ -52,6 +52,9 @@ def plot_extra_loads(settings):
     plt.axhline(0, color='black')
     plt.axvline(0, color='black')
     plt.scatter(xs, ys, (10+ms-np.min(ms)))
+    plt.title('Extra load distribution')
+    plt.xlabel('x')
+    plt.xlabel('y')
     plt.xlim((-dx, dx))
     plt.ylim((-dx, dx))
     plt.show()
@@ -236,7 +239,10 @@ def plotTrajectories(settings):
     # paths = [os.path.join('data', settings['name'], settings['suffix'], get_test_trajectory_filename(settings, seed) +'_reference.npy')
                 # for seed in seeds]
     controller_suffix = settings['testSettings']['sfb']
-    paths = [get_simulation_trajectory_path(settings, 'test', controller_suffix, reference=True)+'.npy']
+    if 'traj_filename' in settings['testSettings']:
+        paths = [settings['testSettings']['traj_filename']+'_reference.npy']
+    else:
+        paths = [get_simulation_trajectory_path(settings, 'test', controller_suffix, reference=True)+'.npy']
     trajectories4test = get_absolute_trajectories(settings, paths)
     reference = get_reference(settings, paths[0])
     colors = sns.color_palette("deep", len(trajectories4test))
@@ -281,7 +287,8 @@ def training_parallel(settings_base):
         print(f"J calculated:\n {np.array_str(J, precision=6)}")
         extra_load.update({'J':J})
         settings['extra_loads'].append(extra_load)
-    plot_extra_loads(settings)
+    if settings['trainSettings']['gui']:
+        plot_extra_loads(settings)
     fly.run(settings, settings['trainSettings'])
 
 def training_serial(settings_base):
@@ -465,7 +472,7 @@ if __name__=='__main__':
     parser.add_argument('--eval',       action='store_true',        default=None,      help='Plot the test flight trajectory')
     parser.add_argument('--use_urdf',   action='store_true',        default=False,     help='Whether to change quadcopter through the urdf file or through direct adjustments in simulation')
     parser.add_argument('--paths',      nargs='*',                  default=[],        help='Use only particular paths to synthesize the controller with')
-    parser.add_argument('--mode',       type=str,                   default='test',    help='Which mode to run simulation in', choices=['test', 'rddc', 'ceddc', 'like_experiment', 'ddc'] )
+    parser.add_argument('--mode',       type=str,                   default='test',    help='Which mode to run simulation in', choices=['test', 'rddc', 'ceddc', 'like_experiment', 'ddc', 'sof'] )
     ARGS = parser.parse_args()
 
     module = importlib.import_module('rddc.run.settings.simulation' + '_' + ARGS.mode)
