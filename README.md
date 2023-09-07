@@ -71,9 +71,13 @@ This figure visualizes a comprehensive parameter study. Recreating the data and 
 ```
 python -m rddc.run.synthetic --testcase dean --mode var_sigma_N
 ```
-2. Create the plots
+2. Extract the data
 ```
-python -m rddc.evaluation.heatmap_sigma_N --testcase dean --mode var_sigma_N
+python -m rddc.evaluation.heatmap_sigma_N_extract_data --testcase dean --mode var_sigma_N
+```
+3. Create the plots
+```
+python -m rddc.evaluation.heatmap_sigma_N
 ```
 
 #### Fig. 4 (Synthetic example with different number of observed systems and varying trajectory length)
@@ -84,9 +88,13 @@ This figure visualizes a comprehensive parameter study. Recreating the data and 
 ```
 python -m rddc.run.synthetic --testcase dean --mode var_T_N
 ```
-2. Create the plots
+2. Extract the data
 ```
-python -m rddc.evaluation.heatmap_T_N --testcase dean --mode var_T_N
+python -m rddc.evaluation.heatmap_T_N_extract_data --testcase dean --mode var_T_N
+```
+3. Create the plots
+```
+python -m rddc.evaluation.heatmap_T_N
 ```
 
 #### Fig. 6 (LS-LQR (grey dashed) and RDDC (colored, solid) controllers tested in controlling the same drone variants)
