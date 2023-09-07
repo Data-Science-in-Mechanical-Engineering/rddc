@@ -11,6 +11,7 @@ import json
 import os
 import rddc.evaluation.tools as evaltools
 import seaborn as sns
+import argparse
 
 def get_trajectories(paths):
     trajectories = [np.load(path, allow_pickle=True).item()['state'] for path in paths]
@@ -21,16 +22,25 @@ def get_trajectories(paths):
         output_trajectories.append(trajectory)
     return output_trajectories
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Trajectory plot for experiments with drones')
+    parser.add_argument('--weights',       required=True,  type=str,   help='Weight configuration to plot', metavar='', choices=['220000', '200020', '000023', '020003'])
+    args = parser.parse_args()
+    return args
+
+args = parse_arguments()
+
 ctrl_configurations = {
-    'exp1'          : ['exp1_controller_rddc_nom',          10,     'exp_1'],
-    'exp2'          : ['exp2_controller_rddc_N14_T200+',    10,     'exp_N'],
-    's2r1'          : ['s2r1_controller_rddc',              10,     's2r_1'],
-    's2r4'          : ['s2r4_controller_rddc',              10,     's2r_N'],
-    's2r4_5deg'     : ['s2r4_controller_rddc_drpy5deg',     10,     's2r_N_n'],
-    's2r5_0.5deg'   : ['s2r5_controller_rddc_drpy0.5deg',   50,     's2r_hf_n'],
+    'exp1'          : ['exp1_controller_rddc_nom',          10,     'exp\_1'],
+    'exp2'          : ['exp2_controller_rddc_N14_T200+',    10,     'exp\_N'],
+    's2r1'          : ['s2r1_controller_rddc',              10,     'sim\_1'],
+    's2r4'          : ['s2r4_controller_rddc',              10,     'sim\_N'],
+    's2r4_5deg'     : ['s2r4_controller_rddc_drpy5deg',     10,     'sim\_N\_n'],
+    's2r5_0.5deg'   : ['s2r5_controller_rddc_drpy0.5deg',   50,     'sim\_hf\_n'],
     # 's2r5'          : ['s2r5_controller_rddc',              50],
 }
-weight_configuration = '220000'
+weight_configuration = args.weights
+# weight_configuration = '220000'
 # weight_configuration = '200020'
 # weight_configuration = '000023'
 # weight_configuration = '020003'
@@ -76,7 +86,7 @@ trajectories = get_trajectories(abs_traj_paths)
 ref_path = os.path.join(test_paths[0], 'reference_trajectory.npy')
 ref = np.load(ref_path, allow_pickle=True)
 
-(fig_width_in, fig_height_in) = evaltools.get_size(245, subplots=(1,1), fraction=1, ratio='golden')
+(fig_width_in, fig_height_in) = evaltools.get_size(180, subplots=(1,1), fraction=1, ratio='golden')
 fig, ax = plt.subplots(figsize=(fig_width_in, fig_height_in*1.15))
 trajLines = list()
 trajNames = [ctrl[2] for ctrl in ctrl_configurations.values()]
