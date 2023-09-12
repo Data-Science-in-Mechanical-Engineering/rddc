@@ -442,7 +442,7 @@ def robust_stabilization_scenario_slemma(trajectories, noiseInfo, perfInfo, verb
     # problem.options['dualize'] = True
 
     # problem.add_constraint(v_P >> 1e-4)
-    problem.add_constraint(v_P >> 1)
+    problem.add_constraint(v_P >> 1e-6)
     problem.add_constraint(v_a >= 0)
     problem.add_constraint(v_b > 0)
 
