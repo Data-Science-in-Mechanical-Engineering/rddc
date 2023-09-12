@@ -43,30 +43,3 @@ def get_settings():
     D = np.array([[0]])
 
     return locals()
-
-def get_variations():
-    """
-    Parameters from 'get_settings' to vary
-    If a parameter is used to calculate other parameters, it should not be varied,
-        since the calculation won't be adjusted
-    """
-    # N_synth = [1, 2, 3, 4, 5, 6, 8, 10, 15, 20, 30, 100]
-    N_synth = [3,4,5,6]
-
-    # sigma = [1e-2]
-    sigma = [0.03, 0.1, 0.3, 1]
-    # sigma = [1e-3, 3e-3, 1e-2, 3e-2, 4e-2, 5e-2, 7e-2, 1e-1, 2e-1, 3e-1]
-
-    #T = [5, 10, 20, 50]
-    T = [50]
-
-    bound = [0.005]
-
-    assumedBound = [0.01]
-    # assumedBound = [0.005]
-
-    seed = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
-    # seed = [168, 158, 24, 722, 612, 644, 763, 585]
-    # seed = [168, 158, 24, 722, 612, 644, 763, 585, 688, 555, 697, 334, 634, 340, 548, 4, 302, 135, 884, 166, 114, 913, 261, 951, 436, 104, 620, 56, 741, 948, 959, 931, 341, 672, 412, 497, 623, 107, 396, 948, 451, 581, 870, 269, 378, 184, 963, 564, 468, 974]
-
-    return locals()
