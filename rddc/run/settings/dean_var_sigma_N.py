@@ -15,7 +15,7 @@ def get_settings():
                     [0.0,   0.0,   1.0]])
     n = A.shape[0]         # number of state variables x_k
     m = B.shape[1]          # number of control variables u_k
-    sigma = 2e-2            # variability of system matrices
+    sigma = 0.1            # variability of system matrices, overwritten by variations
     # K_prelim = np.array([ [-0.62560034, -0.00824407,  0.00091957],
     #                       [-0.00767528, -0.62593008, -0.00634649],
     #                       [ 0.00121963, -0.00788259, -0.62513108]])
@@ -33,13 +33,13 @@ def get_settings():
 
     N_test = 1000          # number of systems to generate and test
     N_synth = 1            # number of systems used for controller synthesis
-    T = 100                 # number of samples per trajectory
+    T = 500                 # number of samples per trajectory, overwritten by variations
 
     # noise
     m_w = n                 # number of disturbance variables w_k
     B_w = np.eye(n, m_w)
-    bound = 0.01             # noise bound
-    assumedBound = 0.15      # noise bound assumed for robust controller synthesis
+    bound = 0.0005             # noise bound, overwritten by variations
+    assumedBound = 0.001      # noise bound assumed for robust controller synthesis, overwritten by variations
 
     # performance metric
     Q = np.eye(n, n)
