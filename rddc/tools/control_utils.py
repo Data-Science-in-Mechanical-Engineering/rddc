@@ -151,17 +151,18 @@ def check_gen_slater_condition(U0, X0, X1, Phi):
         print('Failed Slater due to numeric errors')
         return False
 
-def plot_systems4synth(systems4synth, color='black', idx_to_plot=None):
+def plot_systems4synth(systems4synth, color='black', idx_to_plot=None, ax=None):
     """
     For a 1-D system, create a scatter plot of a set of systems
     by plotting all chosen B-coefficients over A-coefficients.
     """
+    if ax is None:
+        ax = plt.gca()
     if idx_to_plot is None:
         idx_to_plot = [i for i in range(len(systems4synth))]
     As = [systems4synth[idx][0] for idx in idx_to_plot]
     Bs = [systems4synth[idx][1] for idx in idx_to_plot]
-    import matplotlib.pyplot as plt
-    plot = plt.scatter(As, Bs, marker='x', c=color, s=10, linewidth=0.5)
+    plot = ax.scatter(As, Bs, marker='x', c=color, s=10, linewidth=0.5)
     return plot
 
 def plot_stable_region(K, hatch='/', from_x=-2, to_x=3):
@@ -173,12 +174,14 @@ def plot_stable_region(K, hatch='/', from_x=-2, to_x=3):
 
 
 def draw_sigma_XU(trajectory, noiseInfo, noise_criterion=1, limA=[-0.5, 2.0], limB=[-0.5, 2.0], 
-                    resolution=100, colormap="binary", hatch="X"):
+                    resolution=100, colormap="binary", hatch="X", ax=None):
     """
     For a 1-D system, draws the $\Sigma_{X,U}$ 
     set of all systems that are consistent with
     the provided trajectory and noise information
     """
+    if ax is None:
+        ax = plt.gca()
     start = perf_counter()
     assert noise_criterion in [1,3], "noise_criterion must be either 1 or 3" #1 - van Waarde, 3 - Berberich
     As = np.linspace(*limA, resolution)
@@ -205,7 +208,7 @@ def draw_sigma_XU(trajectory, noiseInfo, noise_criterion=1, limA=[-0.5, 2.0], li
     smoothed_in_sigma = gaussian_filter(in_sigma.astype(float), sigma=smoothing)
 
     # plt.pcolormesh(A_mesh, B_mesh, in_sigma, cmap='binary', shading='nearest', vmin=0, vmax=1, alpha=0.2*in_sigma)
-    plot, _ = plt.contourf(A_mesh, B_mesh, smoothed_in_sigma, levels=[0.5, 1], cmap=colormap, alpha=1.0, vmin=0, vmax=1, hatches=hatch).legend_elements()
+    plot, _ = ax.contourf(A_mesh, B_mesh, smoothed_in_sigma, levels=[0.5, 1], cmap=colormap, alpha=1.0, vmin=0, vmax=1, hatches=hatch).legend_elements()
     end = perf_counter()
     print(f"Plotting time: {end - start:.6f} seconds")
 
