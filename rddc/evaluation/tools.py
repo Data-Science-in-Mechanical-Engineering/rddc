@@ -63,7 +63,7 @@ def get_scalars(settings, variables, variations_all, variations_fixed=dict(), va
             # np.nanmean ignores the nans
             scalars_folded[name_variable] = np.nanmean(scalars_nonfixed[name_variable], axis=dim)
             fraction_nonnans[name_variable] = np.mean(1 - np.isnan(scalars_nonfixed[name_variable]), axis=dim)
-    
+
     return scalars_folded, variations_folded, fraction_nonnans
 
 def get_arrays(settings, variables, variations_all, variations_fixed=dict(), basepath='data'):

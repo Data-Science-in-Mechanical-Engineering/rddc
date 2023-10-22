@@ -1,8 +1,8 @@
 import numpy as np
 from rddc.tools import control_utils
 
-def generate_trajectories_synth(systems, T, rnd=np.random.default_rng(), 
-                            noiseInfo=dict(), N_traj_per_sys=1, start=None, 
+def generate_trajectories_synth(systems, T, rnd=np.random.default_rng(),
+                            noiseInfo=dict(), N_traj_per_sys=1, start=None,
                             K=None, inputNoiseAmplitude=1.0):
     """
     Take given systems (list of tuples (A,B)), generate N_traj for each system
@@ -10,7 +10,7 @@ def generate_trajectories_synth(systems, T, rnd=np.random.default_rng(),
 
     @param: systems: list of tuples (A,B)
     @param: N_traj: number of trajectories per system to generate
-    @param: T: number of samples to generate per trajectory. 
+    @param: T: number of samples to generate per trajectory.
         The output trajectory contains T+1 states and T inputs
     @param: noiseInfo: a dictionary with m_w, bound, B_w
     @param: rnd: random number generator instance
@@ -105,8 +105,8 @@ def generate_trajectories_synth(systems, T, rnd=np.random.default_rng(),
 
     return trajectories
 
-def generate_trajectories_test(systems, T, rnd=np.random.default_rng(), 
-                            noiseInfo=dict(), N_traj_per_sys=1, start=None, 
+def generate_trajectories_test(systems, T, rnd=np.random.default_rng(),
+                            noiseInfo=dict(), N_traj_per_sys=1, start=None,
                             K=None, inputNoiseAmplitude=0.0):
     """
     Take given systems (list of tuples (A,B)), generate N_traj for each system
@@ -114,7 +114,7 @@ def generate_trajectories_test(systems, T, rnd=np.random.default_rng(),
 
     @param: systems: list of tuples (A,B)
     @param: N_traj: number of trajectories per system to generate
-    @param: T: number of samples to generate per trajectory. 
+    @param: T: number of samples to generate per trajectory.
         The output trajectory contains T+1 states and T inputs
     @param: noiseInfo: a dictionary with m_w, bound, B_w
     @param: rnd: random number generator instance
@@ -167,7 +167,7 @@ def generate_one_trajectory(system, T, rnd, noiseInfo, start, K, inputNoiseAmpli
         if K is not None:
             #TODO: why do we add the random input here? shouldn't it be just overwritten?
             # -> No. If we overwrite it, we break persistency of excitation
-            # However, we need to overwrite it for the final system testing, 
+            # However, we need to overwrite it for the final system testing,
             # bool inputNoise takes care of that
             U_all[:, i] = U_all[:, i] + K @ X_all[:, i]
         X_all[:, i+1] = A @ X_all[:,i] + B @ U_all[:,i] + B_w @ W[:,i]

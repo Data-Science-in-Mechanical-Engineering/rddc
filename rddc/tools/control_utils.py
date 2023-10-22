@@ -14,7 +14,7 @@ def hankel_matrix(data, start, rows, cols):
 
     L = rows
     N = cols
-    
+
     each sample stretches over dim[0], sampling stretches over dim[1]
 
     if individual samples of data are vectors (dim[0]>1),
@@ -68,7 +68,7 @@ def check_persistent_excitation_berberich(noisy_system, inputs, noise, tol=None)
 
 def check_sys_is_in_sigma(noisy_system, noise, trajectory):
     """
-    checks if a given system with A, B, B_w is inside the uncertain-loop 
+    checks if a given system with A, B, B_w is inside the uncertain-loop
     parameterization \Sigma_{X, U} (acc. to Berberich19) for a given noise instance
     """
     X_all = trajectory['state']
@@ -108,7 +108,7 @@ def check_assumption_3(W, noiseInfo, tol=0):
     S_w = np.zeros((m_w, T))
     R_w = assumedBound**2 * np.eye(T) * T
 
-    P_w = np.block([[Q_w, S_w], 
+    P_w = np.block([[Q_w, S_w],
                     [S_w.T, R_w]])
     I = np.eye(T)
     quadraticTerm = np.vstack([W, I]).T @ P_w @ np.vstack([W, I])
@@ -173,10 +173,10 @@ def plot_stable_region(K, hatch='/', from_x=-2, to_x=3):
     return plot
 
 
-def draw_sigma_XU(trajectory, noiseInfo, noise_criterion=1, limA=[-0.5, 2.0], limB=[-0.5, 2.0], 
+def draw_sigma_XU(trajectory, noiseInfo, noise_criterion=1, limA=[-0.5, 2.0], limB=[-0.5, 2.0],
                     resolution=100, colormap="binary", hatch="X", ax=None):
     """
-    For a 1-D system, draws the $\Sigma_{X,U}$ 
+    For a 1-D system, draws the $\Sigma_{X,U}$
     set of all systems that are consistent with
     the provided trajectory and noise information
     """

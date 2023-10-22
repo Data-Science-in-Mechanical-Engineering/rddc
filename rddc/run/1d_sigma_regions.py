@@ -35,4 +35,3 @@ if __name__=='__main__':
     settings['suffix'] = 'extra'
     systems4synth.append([np.atleast_2d(0.72), np.atleast_2d(1.48)])
     run_single(settings, systems4synth)
-    

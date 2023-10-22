@@ -29,7 +29,7 @@ variations_to_fold = list()
 ## EXTRACTING THE DATA
 variations_to_fold = ['seed']
 # automatic base on the settings file
-variations_fixed = {key : value[0] for key, value in variations.items() 
+variations_fixed = {key : value[0] for key, value in variations.items()
                         if len(value)==1 and key not in variations_to_fold}
 arrays, var, nonnans = evaltools.get_scalars(
     settings=settings,

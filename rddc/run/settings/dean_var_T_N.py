@@ -7,10 +7,10 @@ def get_settings():
     controllability_tol = 1e-3
     seed = 42
     trunc_threshold = 0.95
-    A = np.array([[1.01,  0.01,  0.0], 
+    A = np.array([[1.01,  0.01,  0.0],
                     [0.01,  1.01,  0.01],
                     [0.0,   0.01,  1.01]])
-    B = np.array([[1.0,   0.0,   0.0], 
+    B = np.array([[1.0,   0.0,   0.0],
                     [0.0,   1.0,   0.0],
                     [0.0,   0.0,   1.0]])
     n = A.shape[0]         # number of state variables x_k

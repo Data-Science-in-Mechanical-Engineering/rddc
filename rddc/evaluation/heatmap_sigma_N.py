@@ -37,7 +37,7 @@ cmap = ListedColormap(sns.color_palette("RdYlGn", n_colors=10)) #divergent, intu
 # cmap = LinearSegmentedColormap.from_list("mycmap",[
 #     evaltools.rgb_to_hex([255, 156, 156]),
 #     evaltools.rgb_to_hex([255, 213, 0]),
-#     evaltools.rgb_to_hex([13, 90, 0]), 
+#     evaltools.rgb_to_hex([13, 90, 0]),
 # ])
 norm = colors.Normalize(vmin=0, vmax=100)
 # sns.set_theme()

@@ -42,8 +42,8 @@ def robust_lqr_scenario(trajectories, noiseInfo, perfInfo, verbosity=1):
     @ouput: K: designed controller. Nan if optimizer didn't succeed.
 
     robustness to disturbances and stabilization is achieved via formulation acc. to:
-    Berberich, Julian, Anne Koch, Carsten W. Scherer, und Frank Allgower. 2020. 
-    „Robust data-driven state-feedback design“. In 2020 American Control Conference (ACC), 
+    Berberich, Julian, Anne Koch, Carsten W. Scherer, und Frank Allgower. 2020.
+    „Robust data-driven state-feedback design“. In 2020 American Control Conference (ACC),
     1532-38. Denver, CO, USA: IEEE. https://doi.org/10.23919/ACC45564.2020.9147320.
 
     robustness to system uncertainty is achieved via scenario approach:
@@ -57,7 +57,7 @@ def robust_lqr_scenario(trajectories, noiseInfo, perfInfo, verbosity=1):
 
     # Input parsing
     N = len(trajectories) # number of trajectories
-    T = trajectories[0]['U0'].shape[1] # length of one trajectory (TODO: should it be equal for all trajectories?
+    T = trajectories[0]['U0'].shape[1] # length of one trajectory
     n = trajectories[0]['X0'].shape[0] # number of states
     m = trajectories[0]['U0'].shape[0] # number of inputs
 
@@ -120,7 +120,7 @@ def robust_lqr_scenario(trajectories, noiseInfo, perfInfo, verbosity=1):
             (stab00 & stab10.T & stab20.T & stab30.T) //
             (stab10 & stab11   & stab21.T & stab31.T) //
             (stab20 & stab21   & stab22   & stab32.T) //
-            (stab30 & stab31   & stab32   & stab33) 
+            (stab30 & stab31   & stab32   & stab33)
         )
 
         problem.add_constraint(stab << 0)
@@ -162,7 +162,6 @@ def robust_lqr_scenario(trajectories, noiseInfo, perfInfo, verbosity=1):
         Y = np.atleast_2d(v_Y.value)
         K = U0M @ np.linalg.inv(Y)
         #print('\nOptimal controller is found: \n{}\n'.format(K))
-    
 
     return K
 
@@ -224,7 +223,7 @@ def regularized_lqr_scenario(trajectories, noiseInfo, perfInfo, reg_factor=1e-1,
         stab11 = v_P
         stab = (
             (stab00     & stab01 ) //
-            (stab01.T   & stab11   ) 
+            (stab01.T   & stab11   )
         )
 
 
@@ -283,8 +282,8 @@ def robust_scenario(trajectories, noiseInfo, perfInfo, verbosity=1):
     @ouput: K: designed controller. Nan if optimizer didn't succeed.
 
     robustness to disturbances stabilization is achieved via formulation acc. to:
-    Berberich, Julian, Anne Koch, Carsten W. Scherer, und Frank Allgower. 2020. 
-    „Robust data-driven state-feedback design“. In 2020 American Control Conference (ACC), 
+    Berberich, Julian, Anne Koch, Carsten W. Scherer, und Frank Allgower. 2020.
+    „Robust data-driven state-feedback design“. In 2020 American Control Conference (ACC),
     1532-38. Denver, CO, USA: IEEE. https://doi.org/10.23919/ACC45564.2020.9147320.
 
     robustness to system uncertainty is achieved via scenario approach:
@@ -294,7 +293,7 @@ def robust_scenario(trajectories, noiseInfo, perfInfo, verbosity=1):
 
     # Input parsing
     N = len(trajectories) # number of trajectories
-    T = trajectories[0]['input'].shape[1] # length of one trajectory (TODO: should it be equal for all trajectories?)
+    T = trajectories[0]['input'].shape[1] # length of one trajectory
     n = trajectories[0]['X0'].shape[0] # number of states
     m = trajectories[0]['U0'].shape[0] # number of inputs
 
@@ -343,7 +342,7 @@ def robust_scenario(trajectories, noiseInfo, perfInfo, verbosity=1):
             (stab00 & stab10.T & stab20.T & stab30.T) //
             (stab10 & stab11   & stab21.T & stab31.T) //
             (stab20 & stab21   & stab22   & stab32.T) //
-            (stab30 & stab31   & stab32   & stab33) 
+            (stab30 & stab31   & stab32   & stab33)
         )
         stab_lmis.append(stab)
 
