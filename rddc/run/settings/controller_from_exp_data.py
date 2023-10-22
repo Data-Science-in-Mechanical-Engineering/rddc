@@ -19,7 +19,7 @@ def get_settings():
     # algorithm = 'robust_h2_scenario_slemma'
     output_verbosity = 0
 
-   
+
     filenames = [
         # 'hover_000000_10Hz_1.0',
         # 'hover_000003_10Hz_1.0',

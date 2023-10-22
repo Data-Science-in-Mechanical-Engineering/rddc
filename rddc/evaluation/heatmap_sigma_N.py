@@ -40,6 +40,7 @@ cmap = ListedColormap(sns.color_palette("RdYlGn", n_colors=10)) #divergent, intu
 #     evaltools.rgb_to_hex([13, 90, 0]), 
 # ])
 norm = colors.Normalize(vmin=0, vmax=100)
+# norm = colors.PowerNorm(2, vmin=0, vmax=100)
 # sns.set_theme()
 basepath = '.'
 
@@ -67,7 +68,7 @@ sns.scatterplot(
     data=data_with_controller, x='N_synth', y='sigma',
     hue='ratio_stable', size='ratio_with_controller',
     sizes=(circle_max_size/10, circle_max_size), palette=cmap, ax=ax, legend=False,
-    linewidth=0, zorder=2
+    linewidth=0, zorder=2, hue_norm=norm
 )
 
 sns.scatterplot(
@@ -81,6 +82,7 @@ cbar = fig.colorbar(ScalarMappable(norm=norm, cmap=cmap), ax=ax, drawedges=False
                     anchor = (1.0, 0.0),
                     shrink = 0.67,
                     ticks = [0, 20, 40, 60, 80, 100],
+                    # ticks = [0, 30, 50, 70, 90, 95, 100],
                     label='% stable systems')
 
 #### Second legend: circle sizes #####
@@ -91,9 +93,9 @@ ada = AnchoredDrawingArea(  90, 35, 0, 0,
                             bbox_transform=ax.transAxes)
 ada.drawing_area.add_artist(Circle((10, 5), max_circle_size_legend, fc="k"))
 ada.drawing_area.add_artist(Circle((30, 5), max_circle_size_legend/np.sqrt(3), fc="k"))
-ada.drawing_area.add_artist(Circle((50, 5), max_circle_size_legend/np.sqrt(10), fc="k"))
+ada.drawing_area.add_artist(Circle((47.5, 5), max_circle_size_legend/np.sqrt(10), fc="k"))
 ax.set_ylim()
-ax.scatter([2.25], [1.7], marker="x", color="black", s=20, linewidth=1, clip_on=False)
+ax.scatter([2.0], [1.7], marker="x", color="black", s=20, linewidth=1, clip_on=False)
 ax.add_artist(ada)
 ax.add_artist(AnchoredText("100",
                     loc='upper left', frameon=False,
@@ -105,11 +107,11 @@ ax.add_artist(AnchoredText("50",
                     bbox_transform=ax.transAxes))
 ax.add_artist(AnchoredText("2",
                     loc='upper left', frameon=False,
-                    bbox_to_anchor=(0.0, 1.2465),
+                    bbox_to_anchor=(-0.01, 1.2465),
                     bbox_transform=ax.transAxes))
 ax.add_artist(AnchoredText("0",
                     loc='upper left', frameon=False,
-                    bbox_to_anchor=(0.12, 1.2465),
+                    bbox_to_anchor=(0.08, 1.2465),
                     bbox_transform=ax.transAxes))
 
 ax.add_artist(AnchoredText("% informative data",

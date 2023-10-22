@@ -78,7 +78,7 @@ def generate_trajectories4synth(settings, systems4synth=None, save=False):
 
 def synthesize_controller(settings, trajectories4synth=None, save=False):
     path = os.path.join('data', settings['name'], settings['suffix'])
-    
+
     if trajectories4synth is None:
         trajectories4synth = np.load(os.path.join(path,'trajectories4synth.npy'), allow_pickle=True).item()['trajectories4synth']
 
@@ -113,7 +113,7 @@ def create_systems4test(settings, sys_dist=None, save=False):
         sys_dist            = sys_dist,
         rnd                 = rnd
     )
-    
+
     if save:
         files.save_dict_npy(os.path.join(path, 'systems4test.npy'), {'systems4test': systems4test})
 

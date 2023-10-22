@@ -53,9 +53,10 @@ data_without_controller = data[data['controller_found']==False]
 
 ## PLOTTING
 (fig_width_in, fig_height_in) = evaltools.get_size(245, subplots=(1,1), fraction=1)
-fig, ax = plt.subplots(figsize=(fig_width_in, fig_height_in*1.1))
+fig, ax = plt.subplots(figsize=(fig_width_in, fig_height_in*1.5))
 fig.set_dpi(300)
-fig.subplots_adjust(bottom=0.18, top=0.9, left=0.18, right=0.95)
+# fig.subplots_adjust(bottom=0.18, top=0.9, left=0.18, right=0.95)
+fig.subplots_adjust(bottom=0.12, top=0.95, left=0.18, right=0.95)
 ax_bbox_in_width = ax.get_window_extent().width / fig.get_dpi()
 ax_bbox_in_height = ax.get_window_extent().height / fig.get_dpi()
 # point size is to be given in (typographical dot)^2, typographical dot is 1/72 inch
@@ -86,15 +87,15 @@ cbar = fig.colorbar(ScalarMappable(norm=norm, cmap=cmap), ax=ax, drawedges=False
 max_circle_size_legend = 5.2
 ada = AnchoredDrawingArea(  90, 35, 0, 0,
                             loc=('upper left'), frameon=False,
-                            bbox_to_anchor=(-0.25, 1.5),
+                            bbox_to_anchor=(-0.25, 1.35),
                             bbox_transform=ax.transAxes)
 ada.drawing_area.add_artist(Circle((10, 5), max_circle_size_legend, fc="k"))
 ada.drawing_area.add_artist(Circle((30, 5), max_circle_size_legend/np.sqrt(3), fc="k"))
-ada.drawing_area.add_artist(Circle((50, 5), max_circle_size_legend/np.sqrt(10), fc="k"))
+ada.drawing_area.add_artist(Circle((47.5, 5), max_circle_size_legend/np.sqrt(10), fc="k"))
 ax.set_ylim()
-ax.scatter([2.25], [2.9e4], marker="x", color="black", s=20, linewidth=1, clip_on=False)
+ax.scatter([2.0], [2.9e4], marker="x", color="black", s=20, linewidth=1, clip_on=False)
 ax.add_artist(ada)
-text_height = 1.351
+text_height = 1.2465
 ax.add_artist(AnchoredText("100",
                     loc='upper left', frameon=False,
                     bbox_to_anchor=(-0.24, text_height),
@@ -105,21 +106,21 @@ ax.add_artist(AnchoredText("50",
                     bbox_transform=ax.transAxes))
 ax.add_artist(AnchoredText("2",
                     loc='upper left', frameon=False,
-                    bbox_to_anchor=(0.0, text_height),
+                    bbox_to_anchor=(-0.01, text_height),
                     bbox_transform=ax.transAxes))
 ax.add_artist(AnchoredText("0",
                     loc='upper left', frameon=False,
-                    bbox_to_anchor=(0.12, text_height),
+                    bbox_to_anchor=(0.08, text_height),
                     bbox_transform=ax.transAxes))
 
 ax.add_artist(AnchoredText("% informative data",
                     loc='upper left', frameon=False,
-                    bbox_to_anchor=(-0.25, 1.475),
+                    bbox_to_anchor=(-0.25, 1.325),
                     bbox_transform=ax.transAxes))
 
 
 ax.set_xlabel(r'Number of observed systems $N$')
-ax.set_ylabel(r'Trajectory length $M$')
+ax.set_ylabel(r'Trajectory length $T$')
 ax.set_xticks(N_synths, labels=[str(i) for i in N_synths], minor=False) #
 # ax.set_yticks(var['T'], labels=["{:3.2g}".format(i) for i in var['T']], minor=False) #
 yticks = [  *list(np.array([1,2,3,4,5,6,7,8,9])*1e1),

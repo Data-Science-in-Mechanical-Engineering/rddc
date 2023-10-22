@@ -33,7 +33,7 @@ def get_settings():
     m_w = n                 # number of disturbance variables w_k
     B_w = np.eye(n, m_w)
     bound = 0.01             # noise bound
-    # assumedBound = 0.015      # noise bound assumed for robust controller synthesis
+    assumedBound = 0.015      # noise bound assumed for robust controller synthesis
 
     # performance metric
     Q = np.eye(n, n)
