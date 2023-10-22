@@ -92,7 +92,7 @@ ada.drawing_area.add_artist(Circle((10, 5), max_circle_size_legend, fc="k"))
 ada.drawing_area.add_artist(Circle((30, 5), max_circle_size_legend/np.sqrt(3), fc="k"))
 ada.drawing_area.add_artist(Circle((50, 5), max_circle_size_legend/np.sqrt(10), fc="k"))
 ax.set_ylim()
-ax.scatter([2.25], [2.9e4], marker="x", color="black", s=20, linewidth=1, clip_on=False)
+ax.scatter([2.7], [2.9e4], marker="x", color="black", s=20, linewidth=1, clip_on=False)
 ax.add_artist(ada)
 text_height = 1.351
 ax.add_artist(AnchoredText("100",
