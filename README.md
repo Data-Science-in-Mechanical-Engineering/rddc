@@ -1,20 +1,24 @@
 # Experience Transfer for Robust Direct Data-Driven Control
 
-This repository contains the supplementary code for the paper "Experience Transfer for Robust Direct Data-Driven Control"
-A preprint of the paper can be found on [arXiv](https://arxiv.org/abs/2306.16973).
-
-![Trajectories of the quadcopters with the robust controller](https://github.com/Data-Science-in-Mechanical-Engineering/rddc/assets/76944030/a7d45ef1-78b7-44b6-9814-8b7c38e8fadf)
-
+This repository contains the supplementary code for the master thesis "Learning-based Control for Heterogeneous Quadcopter Fleets" written by Dmitrii Likhachev under the supervision of Alexander von Rohr at the Institute for Data Science in Mechanical Engineering of RWTH Aachen University.
 
 ## Abstract
 
-Learning-based control uses data to design efficient controllers for specific systems. When multiple systems are involved, *experience transfer* usually focuses on data availability and controller performance yet neglects robustness to changes between systems. In contrast, this letter explores experience transfer from a robustness perspective. We leverage the transfer to design controllers that are robust not only to the uncertainty regarding an individual agent's model but also to the choice of agent in a fleet.  Experience transfer enables the design of safe and robust controllers that work out of the box for all systems in a heterogeneous fleet.  Our approach combines scenario optimization and recent formulations for direct data-driven control without the need to estimate a model of the system or determine uncertainty bounds for its parameters. We demonstrate the benefits of our data-driven robustification method through a numerical case study and obtain learned controllers that generalize well from a small number of open-loop trajectories in a quadcopter simulation.
+Automation through the use of robots has consistently demonstrated efficiency in terms of cost, safety, and the quality of outcomes across various fields. Certain tasks, like terrain exploration and mapping or forest firefighting, are more efficiently executed by deploying fleets of multiple robots. The robots in the fleet might exhibit different dynamical behavior due to factors such as changes in equipment or varying payloads.
+In such scenarios, it is desired to have a single universal low-level controller that can stabilize all fleet members instead of manually tuning or developing a controller for each possible configuration. Finding such a controller can be challenging if underlying system's model is unavailable and the underlying uncertainty of the behavior is not quantified.
 
-### Citation 
-If you find our code or paper useful, please consider citing the current preprint
-```
+We propose an algorithm for probabilistically robust control design that does not need to access or estimate the system's model or behavioral uncertainty.
+Instead, the algorithm uses the data collected from different fleet members during a test operation or from a simulation. It solves a convex optimization problem based on the data and returns a state-feedback controller that stabilizes all of the observed fleet members. Moreover, the probability of stabilizing the entire fleet, including unseen variations, grows as more members are observed.
+
+We provide theoretical guarantees for the robustification probability based on the number of systems observed. When put to the test through a numerical example, we found that the algorithm generalized faster than our theoretical guarantee predicted. Then, we showcase its performance for simulated and real quadcopters and highlight insights for its potential application for real-world robotic systems.
+
+### Citation
+
+This thesis is based on the following publication. If you find this code or paper useful, please consider citing it:
+
+```bibtex
 @misc{vonrohr2023experience,
-      title={Experience Transfer for Robust Direct Data-Driven Control}, 
+      title={Experience Transfer for Robust Direct Data-Driven Control},
       author={Alexander von Rohr and Dmitrii Likhachev and Sebastian Trimpe},
       year={2023},
       eprint={2306.16973},
@@ -24,6 +28,7 @@ If you find our code or paper useful, please consider citing the current preprin
 ```
 
 ## How to use the supplementary code
+
 ### Software Requirements
 
 * python 3.8
@@ -32,22 +37,35 @@ If you find our code or paper useful, please consider citing the current preprin
 * latex (e.g. `texlive-latex-recommended` + `texlive-latex-extra`)
 
 ### Installation
+
 * Install the basic software requirements
-* Clone this repository and the [gym-pybullet-drones](https://github.com/utiasDSL/gym-pybullet-drones) submodule
-* Install the dependencies using pipenv:
+* Clone this repository
+* Get the gym-pybullet-drones submodule
+
+```bash
+git submodule update --init`
 ```
+
+* Install the dependencies using pipenv:
+
+```bash
 pipenv install
 ```
 
 ### Running the environment
+
 * Navigate to the root of the installation
 * activate the virtual environment
-```
+
+```bash
 pipenv shell
 ```
+
 if this command doesn't work, try `python -m pipenv shell`
+
 * Run modules from the root of the installation using `python -m`, e.g.
-```
+
+```bash
 python -m rddc.run.simulation --train
 ```
 
@@ -57,72 +75,102 @@ After each simulation / variation run, the data will be stored in `data/`. The f
 
 Make sure to start every attempt at reproducing the results with an empty corresponding data folder.
 
-#### Fig. 2 (Illustrative example of scenario optimization for a fleet of one-dimensional systems)
-```
+#### Fig. 4.1 (Visualization of scenario optimization for a fleet of four one-dimensional systems)
+
+```bash
 python -m rddc.run.1d_sigma_regions
 python -m rddc.evaluation.plot_sigma_regions
 ```
 
-#### Fig. 3 (Synthetic example with different number of observed systems and varying degree of uncertainty)
+#### Fig. 5.1 (Synthetic example with varying number of observed systems and degree of uncertainty)
+
 This figure visualizes a comprehensive parameter study. Recreating the data and reproducing the plots might require significant amount of computational resources (~2000 core-hours).
+
 * Adjust the number of cores available for computation in `rddc/run/settings/dean_var_sigma_N.py`.
 * If desired, adjust the parameters to vary in the same file (function `get_variations()`).
-1. Simulate the parameter study: (Skip this if data is already available and stored in `./data/dean_var_sigma_N`)
-```
-python -m rddc.run.synthetic --testcase dean --mode var_sigma_N
-```
-2. Extract the data
-```
-python -m rddc.evaluation.heatmap_sigma_N_extract_data --testcase dean --mode var_sigma_N
-```
-3. Create the plots
-```
-python -m rddc.evaluation.heatmap_sigma_N
-```
 
-#### Fig. 4 (Synthetic example with different number of observed systems and varying trajectory length)
+1. Simulate the parameter study: (Skip this if data is already available and stored in `./data/dean_var_sigma_N`)
+
+      ```bash
+      python -m rddc.run.synthetic --testcase dean --mode var_sigma_N
+      ```
+
+2. Extract the data
+
+      ```bash
+      python -m rddc.evaluation.heatmap_sigma_N_extract_data --testcase dean --mode var_sigma_N
+      ```
+
+3. Create the plots
+
+      ```bash
+      python -m rddc.evaluation.heatmap_sigma_N
+      ```
+
+#### Fig. 5.2 (Synthetic example with varying number of observed systems and trajectory length)
+
 This figure visualizes a comprehensive parameter study. Recreating the data and reproducing the plots might require significant amount of computational resources (~2000 core-hours).
+
 * Adjust the number of cores available for computation in `rddc/run/settings/dean_var_T_N.py`.
 * If desired, adjust the parameters to vary in the same file (function `get_variations()`).
+
 1. Simulate the parameter study: (Skip this if data is already available and stored in `./data/dean_var_T_N`)
-```
-python -m rddc.run.synthetic --testcase dean --mode var_T_N
-```
+
+      ```bash
+      python -m rddc.run.synthetic --testcase dean --mode var_T_N
+      ```
+
 2. Extract the data
-```
-python -m rddc.evaluation.heatmap_T_N_extract_data --testcase dean --mode var_T_N
-```
+
+      ```bash
+      python -m rddc.evaluation.heatmap_T_N_extract_data --testcase dean --mode var_T_N
+      ```
+
 3. Create the plots
-```
-python -m rddc.evaluation.heatmap_T_N
+
+      ```bash
+      python -m rddc.evaluation.heatmap_T_N
+      ```
+
+#### Fig. 5.3 (Uncertainty sets for varying trajectory lengths)
+
+```bash
+python -m rddc.evaluation.plot_sigma_regions_T_seed
 ```
 
-#### Fig. 6 (LS-LQR (grey dashed) and RDDC (colored, solid) controllers tested in controlling the same drone variants)
-* If desired, adjust the simulation settings (gui, trajectory length, etc.) in `rddc/run/settings/simulation.py`.
-```
-python -m rddc.run.simulation --train --K
-```
-* To produce the LS-LQR data run:
-```
-python -m rddc.run.simulation --test indirect
-```
-* To produce the RDDC data run:
-```
-python -m rddc.run.simulation --test direct
-```
-* (Optional) after each run, you can plot the results using:
-```
-python -m rddc.run.simulation --eval indirect
-python -m rddc.run.simulation --eval direct
-```
-* Produce the figure with:
-```
-python -m rddc.evaluation.rddc_vs_LS_with_wind
-```
-Note: if for any reason `--train` or `--test` simulation runs are aborted, make sure to navigate to `gym-pybullet-drones/gym_pybullet_drones/assets/` and restore the original `cf2x.urdf` file. You can do it e.g. using git: `git reset --hard`.
+#### Fig. 5.5 (Tod-down view of simulated test flights)
+
+* Plug `ceddc` or `sof` into `<mode>` to reproduce the __sim_1__ and __sim_N__ respectively
+* If desired, adjust the simulation settings (gui, trajectory length, etc.) in `rddc/run/settings/simulation_<mode>.py`.
+
+1. Produce training data and the controller based on it
+
+      ```bash
+      python -m rddc.run.simulation --train --K --mode <mode>
+      ```
+
+2. Execute the test runs:
+
+      ```bash
+      python -m rddc.run.simulation --test --mode <mode>
+      ```
+
+3. (Optional) after each run, you can plot the results using:
+
+      ```bash
+      python -m rddc.run.simulation --eval --mode <mode>
+      ```
+
+4. Produce the figures with:
+
+      ```bash
+      python -m rddc.evaluation.rddc_quad_demo --mode <mode>
+      ```
 
 ### Troubleshooting
+
 If you encounter issues with paths, check the following files and adjust the variables `basepath` to the global path of your installation:
+
 * `rddc/evaluation/plot_sigma_regions.py`
 * `rddc/evaluation/rddc_vs_LS_with_wind.py`
 * `rddc/evaluation/heatmap_T_N.py`
