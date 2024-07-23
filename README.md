@@ -1,26 +1,25 @@
-# Experience Transfer for Robust Direct Data-Driven Control
+# Robust Direct Data-Driven Control for Probabilistic Systems
 
-This repository contains the supplementary code for the paper "Experience Transfer for Robust Direct Data-Driven Control"
+This repository contains the supplementary code for the paper "Robust Direct Data-Driven Control for Probabilistic Systems"
 A preprint of the paper can be found on [arXiv](https://arxiv.org/abs/2306.16973).
-
-![Trajectories of the quadcopters with the robust controller](https://github.com/Data-Science-in-Mechanical-Engineering/rddc/assets/76944030/a7d45ef1-78b7-44b6-9814-8b7c38e8fadf)
 
 ## Abstract
 
-Learning-based control uses data to design efficient controllers for specific systems. When multiple systems are involved, *experience transfer* usually focuses on data availability and controller performance yet neglects robustness to changes between systems. In contrast, this letter explores experience transfer from a robustness perspective. We leverage the transfer to design controllers that are robust not only to the uncertainty regarding an individual agent's model but also to the choice of agent in a fleet.  Experience transfer enables the design of safe and robust controllers that work out of the box for all systems in a heterogeneous fleet.  Our approach combines scenario optimization and recent formulations for direct data-driven control without the need to estimate a model of the system or determine uncertainty bounds for its parameters. We demonstrate the benefits of our data-driven robustification method through a numerical case study and obtain learned controllers that generalize well from a small number of open-loop trajectories in a quadcopter simulation.
+We propose a data-driven control method for systems with aleatoric uncertainty, such as robot fleets with variations between agents. Our method leverages shared trajectory data to increase the robustness of the designed controller and thus facilitate transfer to new variations without the need for prior parameter and uncertainty estimation. In contrast to existing work on experience transfer for performance, our approach focuses on robustness and uses data collected from multiple realizations to guarantee generalization to unseen ones. Our method is based on scenario optimization combined with recent formulations for direct data-driven control. We derive upper bounds on the minimal amount of data required to provably achieve quadratic stability for probabilistic systems with aleatoric uncertainty and demonstrate the benefits of our data-driven method through a numerical example. We find that the learned controllers generalize well to high variations in the dynamics even when based on only a few short open-loop trajectories. Robust experience transfer enables the design of safe and robust controllers that work ``out of the box'' without additional learning during deployment.
 
 ### Citation
 
 If you find our code or paper useful, please consider citing the current preprint
 
 ```bibtex
-@misc{vonrohr2023experience,
-      title={Experience Transfer for Robust Direct Data-Driven Control},
+@misc{vonrohr2024robustdirectdatadrivencontrol,
+      title={Robust Direct Data-Driven Control for Probabilistic Systems}, 
       author={Alexander von Rohr and Dmitrii Likhachev and Sebastian Trimpe},
-      year={2023},
+      year={2024},
       eprint={2306.16973},
       archivePrefix={arXiv},
-      primaryClass={cs.RO}
+      primaryClass={cs.RO},
+      url={https://arxiv.org/abs/2306.16973}, 
 }
 ```
 
@@ -75,7 +74,7 @@ python -m rddc.evaluation.plot_sigma_regions
 
 #### Fig. 3 (Synthetic example with different number of observed systems and varying degree of uncertainty)
 
-This figure visualizes a comprehensive parameter study. Recreating the data and reproducing the plots might require significant amount of computational resources (~2000 core-hours).
+This figure visualizes a comprehensive parameter study. Recreating the data and reproducing the plots might require significant amount of computational resources (~2000 core-hours). Go to step 3 to recreate the plots with the data from this repository.
 
 * Adjust the number of cores available for computation in `rddc/run/settings/dean_var_sigma_N.py`.
 * If desired, adjust the parameters to vary in the same file (function `get_variations()`).
@@ -100,7 +99,7 @@ This figure visualizes a comprehensive parameter study. Recreating the data and 
 
 #### Fig. 4 (Synthetic example with different number of observed systems and varying trajectory length)
 
-This figure visualizes a comprehensive parameter study. Recreating the data and reproducing the plots might require significant amount of computational resources (~2000 core-hours).
+This figure visualizes a comprehensive parameter study. Recreating the data and reproducing the plots might require significant amount of computational resources (~2000 core-hours). Go to step 3 to recreate the plots with the data from this repository.
 
 * Adjust the number of cores available for computation in `rddc/run/settings/dean_var_T_N.py`.
 * If desired, adjust the parameters to vary in the same file (function `get_variations()`).
