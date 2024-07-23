@@ -1,6 +1,7 @@
 # Robust Direct Data-Driven Control for Probabilistic Systems
 
-This repository contains the supplementary code for the paper "Robust Direct Data-Driven Control for Probabilistic Systems"
+This repository contains the supplementary code for the paper "Robust Direct Data-Driven Control for Probabilistic Systems".
+
 A preprint of the paper can be found on [arXiv](https://arxiv.org/abs/2306.16973).
 
 ## Abstract
