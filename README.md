@@ -1,8 +1,8 @@
 # Robust Direct Data-Driven Control for Probabilistic Systems
 
-This repository contains the supplementary code for the paper "Robust Direct Data-Driven Control for Probabilistic Systems".
+This repository contains the supplementary code for the paper [Robust Direct Data-Driven Control for Probabilistic Systems](https://www.sciencedirect.com/science/article/pii/S0167691124002998) published at the [Systems & Control Letters](https://www.sciencedirect.com/journal/systems-and-control-letters).
 
-A preprint of the paper can be found on [arXiv](https://arxiv.org/abs/2306.16973).
+A preprint of the paper is on [arXiv](https://arxiv.org/abs/2306.16973).
 
 ## Abstract
 
@@ -10,17 +10,19 @@ We propose a data-driven control method for systems with aleatoric uncertainty, 
 
 ### Citation
 
-If you find our code or paper useful, please consider citing the current preprint
+If you find our code or paper useful, please consider citing
 
 ```bibtex
-@misc{vonrohr2024robustdirectdatadrivencontrol,
-      title={Robust Direct Data-Driven Control for Probabilistic Systems}, 
-      author={Alexander von Rohr and Dmitrii Likhachev and Sebastian Trimpe},
-      year={2024},
-      eprint={2306.16973},
-      archivePrefix={arXiv},
-      primaryClass={cs.RO},
-      url={https://arxiv.org/abs/2306.16973}, 
+@article{vonrohr2024robust,
+      title = {Robust direct data-driven control for probabilistic systems},
+      author = {Alexander {von Rohr} and Dmitrii Likhachev and Sebastian Trimpe},
+      journal = {Systems & Control Letters},
+      volume = {196},
+      pages = {106011},
+      year = {2025},
+      issn = {0167-6911},
+      doi = {https://doi.org/10.1016/j.sysconle.2024.106011},
+      url = {https://www.sciencedirect.com/science/article/pii/S0167691124002998},
 }
 ```
 
